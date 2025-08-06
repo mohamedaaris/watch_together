@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Watch Together{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            font-family: 'Orbitron', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+        }
+
+        .form-container {
+            background: #1c1c1e;
+            padding: 40px 30px;
+            border-radius: 16px;
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.2), 0 0 80px rgba(0, 255, 255, 0.15);
+            width: 400px;
+            animation: fadeIn 2s ease-in-out infinite;
+        }
+
+        @keyframes fadeIn {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        h2 {
+            text-align: center;
+            color: cyan;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        label {
+            font-weight: bold;
+            color: #ccc;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .input-style {
+            width: 95%;
+            padding: 8px;
+            margin-bottom: 20px;
+            border: none;
+            border-radius: 8px;
+            background: #2a2a2a;
+            color: #fff;
+            font-family:'Orbitron', sans-serif;
+            font-size: 16px;
+            box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+            outline: none;
+            transition: box-shadow 0.3s ease;
+        }
+
+        .input-style:focus {
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.7);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: cyan;
+            color: black;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family:'Orbitron', sans-serif;
+            font-size: 16px;
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            background: #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.7);
+        }
+
+        .flash.success {
+            color: #0f0;
+            margin-bottom: 10px;
+        }
+
+        .flash.error {
+            color: #f00;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 500px) {
+            .form-container {
+                padding: 20px;
+                margin: 0 15px;
+                border-radius: 12px;
+            }
+
+            h2 {
+                font-size: 22px;
+                margin-bottom: 20px;
+            }
+
+            .submit-btn {
+                padding: 10px;
+                font-size: 15px;
+            }
+
+            .input-style {
+                padding: 9px;
+                font-size: 14px;
+            }
+
+            .link {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="form-container">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Signup{% endblock %}
+
+{% block content %}
+<h1 style="text-align: center;">Signup</h1>
+{% with messages=get_flashed_messages(with_categories=True) %}
+    {% for category, message in messages%}
+        <p class="{{category}}">{{message}}</p>
+    {% endfor %}
+{% endwith %}
+<form method="POST">
+    {{form.hidden_tag()}}
+    <p>
+        {{form.name.label}}
+        {{ form.name(class_="input-style", placeholder='Enter your name') }}
+        {% if form.name.errors %}
+            <span style="color: red;">{{form.name.errors[0]}}</span>
+        {% endif %}
+    </p>
+    <p>
+        {{form.email.label}}
+       {{ form.email(class_="input-style", placeholder='Enter your email') }}
+        {% if form.email.errors %}
+            <span style="color: red;">{{form.email.errors[0]}}</span>
+        {% endif %}
+    </p>
+    <p>
+        {{form.password.label}}
+        {{ form.password(class_="input-style", placeholder='Enter your password') }}
+        {% if form.password.errors %}
+            <span style="color: red;">{{form.password.errors[0]}}</span>
+        {% endif %}
+    </p>
+    <p>{{form.submit(class_="submit-btn")}}</p>
+    <p style="text-align: center;">
+        already have an account?
+        <a href="{{ url_for('login') }}" style="color: #007bff; text-decoration: none;">login</a>
+    </p>
+</form>
+{% endblock %}

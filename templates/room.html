@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Room: {{ room }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+    <style>
+        .chat-box {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            margin: 20px auto;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            height: 300px;
+            box-shadow: 0 0 15px #00c9ff;
+            border: 1px solid #00c9ff;
+        }
+
+        #chatArea {
+            flex: 1;
+            overflow-y: auto;
+            background: #111;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Message styles */
+        .message {
+            margin: 8px 0;
+            padding: 10px 15px;
+            border-radius: 10px;
+            max-width: 75%;
+            word-wrap: break-word;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.4);
+            font-size: 14px;
+        }
+
+        .self {
+            background: #00c9ff;
+            color: black;
+            align-self: flex-end;
+            text-align: right;
+            box-shadow: 0 0 8px #00c9ff;
+        }
+
+        .other {
+            background: #222;
+            color: white;
+            align-self: flex-start;
+            text-align: left;
+            box-shadow: 0 0 8px #00c9ff;
+        }
+
+        /* Input area */
+        .chat-input-area {
+            display: flex;
+            gap: 10px;
+        }
+
+        #chatInput {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #00c9ff;
+            border-radius: 6px;
+            background: #000;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+
+        #sendBtn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            background-color: #00c9ff;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 0 10px #00c9ff, 0 0 20px #00c9ff;
+            transition: transform 0.1s ease;
+        }
+
+        #sendBtn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
+        }
+
+        .chat-box,
+        #chatArea,
+        .message {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(to bottom, #000000, #111111);
+            color: white;
+            margin: 0;
+            padding: 0;
+            font-family: 'Orbitron', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        video {
+            width: 100%;
+            max-width: 600px;
+            border: 2px solid #00c9ff;
+            border-radius: 10px;
+            margin-top: 20px;
+            box-shadow: 0 0 20px #00c9ff;
+            background: black;
+        }
+
+        input[type="text"] {
+            background-color: #000;
+            border: 1px solid #00c9ff;
+            padding: 8px;
+            color: #00c9ff;
+            border-radius: 6px;
+            width: 90%;
+            max-width: 500px;
+            margin-top: 15px;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        button {
+            margin-top: 8px;
+        }
+
+        .copy-button {
+            margin-top: 10px;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            background-color: #00c9ff;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: 'Orbitron', sans-serif;
+            box-shadow: 0 0 10px #00c9ff, 0 0 20px #00c9ff;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .copy-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
+        }
+
+
+
+        /* 🌐 Mobile responsive layout */
+        @media screen and (max-width: 600px) {
+            .chat-box {
+                height: 300px;
+                padding: 8px;
+                width: 95%;
+            }
+
+            .message {
+                font-size: 0.85rem;
+                max-width: 90%;
+            }
+
+            #chatInput {
+                font-size: 0.9rem;
+            }
+
+            #sendBtn {
+                padding: 6px 10px;
+                font-size: 0.9rem;
+            }
+
+            .chat-input-area {
+                flex-direction: column;
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Room code:{{room}}</h2>
+        <p>Welcome {{username}}!</p>
+        <video id="videoPlayer" controls>
+            <source src="{{url_for('uploaded_file',filename=room+'.mp4')}}" type="video/mp4">
+            your browser does not support this video tag.
+        </video>
+        <div class="link-box">
+            Share this room: <br>
+            <input type="text" id="room-link" value="{{ request.host_url }}join/{{ room }}" readonly
+                style="width:80%; font-size:16px;">
+            <br>
+            <button onclick="copyLink()" class="copy-button">Copy Room link</button>
+        </div>
+        <div class="chat-box">
+            <div id="chatArea"></div>
+            <div class="chat-input-area">
+                <input type="text" id="chatInput" placeholder="Type a message...">
+                <button id="sendBtn">Send</button>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        const room = "{{room}}";
+        const username = "{{username}}";
+        const video = document.getElementById('videoPlayer');
+        socket.emit('join_event', { room, username });
+
+        let issync = false;
+        video.addEventListener('play', () => {
+            if (!issync) {
+                socket.emit('video_event', { action: "play", time: video.currentTime, room });
+            }
+        });
+        video.addEventListener('pause', () => {
+            if (!issync) {
+                socket.emit('video_event', { action: "pause", time: video.currentTime, room });
+            }
+        });
+        video.addEventListener('ratechange', () => {
+            socket.emit('speed_event', {
+                speed: video.playbackRate,
+                room: room
+            });
+        });
+
+        socket.on('video_event', data => {
+            if (Math.abs(video.currentTime - data.time) > 0.5) {
+                video.currentTime = data.time;
+            }
+            issync = true;
+            if (data.action === 'play' && video.paused) video.play().catch(e => console.warn("Autoplay blocked:", e));
+            if (data.action === 'pause' && !video.paused) video.pause();
+            setTimeout(() => { issync = false; }, 200);
+        });
+        socket.on('speed_event', data => {
+            video.playbackRate = data.speed;
+        });
+
+        const chatArea = document.getElementById("chatArea");
+        const chatInput = document.getElementById("chatInput");
+        const sendBtn = document.getElementById("sendBtn");
+
+        function sendmessage() {
+            const msg = chatInput.value.trim();
+            if (msg) {
+                socket.emit("chat_message", { room, username, message: msg });
+                chatInput.value = "";
+            }
+        }
+        sendBtn.onclick = sendmessage;
+        chatInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') sendmessage();
+        })
+        socket.on("chat_message", data => {
+            const div = document.createElement('div');
+            div.classList.add('message');
+            const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+            div.innerHTML = `<strong>${data.username}</strong><br>${data.message}<br><small>${time}</small>`;
+            div.classList.add(data.username === username ? 'self' : 'other');
+            chatArea.appendChild(div);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        });
+
+        function copyLink() {
+            const link = document.getElementById('room-link');
+            link.select();
+            document.execCommand('copy');
+            alert("link is copied to clipboard!");
+        }
+    </script>
+
+</body>

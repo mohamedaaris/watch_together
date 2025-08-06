@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+    <meta charset="UTF-8">
+    <title>My Website</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Orbitron', sans-serif;
+            background-color: white;
+        }
+
+        .navbar {
+            background-color: black;
+            padding: 5px 10px;
+            color: white;
+        }
+
+        .navbar h1 {
+            display: inline-block;
+            font-size: 30px;
+            padding: 5px;
+        }
+
+        .navbar a {
+            display: inline-block;
+            padding: 10px 10px;
+            color: white;
+            cursor: pointer;
+            font-size: 17px;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .navbar a:hover {
+            background-color: cyan;
+        }
+
+        .form-box {
+            max-width: 500px;
+            margin: 30px auto;
+            padding: 25px;
+            background-color: rgba(0, 0, 0, 0.8);
+            border: 2px solid cyan;
+            border-radius: 15px;
+            box-shadow: 0 0 20px cyan, 0 0 40px #00ffffaa;
+            color: white;
+            text-align: center;
+            transition: 0.3s ease-in-out;
+        }
+
+        .form-box:hover {
+            box-shadow: 0 0 30px #00ffff, 0 0 60px #00ffffaa;
+            transform: scale(1.01);
+        }
+
+        .form-box h2 {
+            color: cyan;
+            margin-bottom: 20px;
+            text-shadow: 0 0 5px cyan;
+        }
+
+        input[type="text"],
+        input[type="file"] {
+            width: 90%;
+            padding: 12px;
+            margin: 12px 0;
+            border: none;
+            border-radius: 8px;
+            outline: none;
+            background: #1c1c1c;
+            color: white;
+            box-shadow: inset 0 0 5px cyan;
+            transition: all 0.2s ease-in-out;
+        }
+
+        input[type="text"]:focus,
+        input[type="file"]:focus {
+            box-shadow: 0 0 10px cyan;
+            background: #111;
+        }
+
+        input[type="submit"] {
+            width: 90%;
+            padding: 12px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 8px;
+            background: cyan;
+            color: black;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 0 10px #00ffffaa;
+            animation: pulse 2s infinite ease-in-out;
+            transition: all 0.3s ease;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #00e0e0;
+            transform: scale(1.03);
+            box-shadow: 0 0 20px #00ffff;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 10px #00ffff; }
+            50% { box-shadow: 0 0 20px #00ffffaa; }
+            100% { box-shadow: 0 0 10px #00ffff; }
+        }
+
+        .buttons {
+            display: inline-block;
+            float: right;
+            padding-top: 20px;
+        }
+
+        .container {
+            font-size: 20px;
+            text-align: center;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .success {
+            color: green;
+        }
+
+        .slider-wrapper {
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .slider-container {
+            width: 200%;
+            display: flex;
+            flex-direction: row;
+            transition: transform 0.5s ease-in-out;
+        }
+
+        .form-container {
+            width: 100%;
+        }
+
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: cyan;
+            text-decoration: underline;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        /* Tablet screens (600px - 1024px) */
+@media (min-width: 601px) and (max-width: 1024px) {
+    .navbar h1 {
+        font-size: 26px;
+    }
+
+    .navbar .buttons a {
+        padding: 9px;
+        font-size: 15px;
+    }
+
+    .form-box {
+        width: 90%;
+        padding: 22px;
+    }
+
+    .form-container {
+        width: 100%;
+    }
+
+    .slider-container {
+        width: 200%;
+    }
+
+    input[type="text"],
+    input[type="file"],
+    input[type="submit"] {
+        width: 95%;
+    }
+}
+
+/* Desktop large screens (1025px and up) */
+@media (min-width: 1025px) {
+    .form-box {
+        width: 500px;
+    }
+
+    .container {
+        font-size: 22px;
+    }
+
+    input[type="text"],
+    input[type="file"],
+    input[type="submit"] {
+        width: 90%;
+    }
+
+    .slider-wrapper {
+        max-width: 1000px;
+        margin: auto;
+    }
+}
+
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1>My App</h1>
+        <div class="buttons">
+            <a href="{{ url_for('home') }}">home</a>
+            <a href="{{ url_for('Dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('login') }}">login</a>
+            <a href="{{ url_for('Signup') }}">Signup</a>
+            
+        </div>
+    </div>
+    <div class="container">
+        <p>Welcome to the home page</p>
+        {% with messages=get_flashed_messages(with_categories=True) %}
+            {% for category,message in messages %}
+                <p class="{{category}}">{{ message }}</p>
+            {% endfor %}
+        {% endwith %}
+    </div>
+    <div class="slider-wrapper">
+        <div id="slider" class="slider-container">
+            <div class="form-container">
+                <div class="form-box">
+                    <h2>create a watch room</h2>
+                    <form action="{{url_for('create_room')}}" method="POST" enctype="multipart/form-data">
+                        <input type="text" name="username" style="font-family:'Orbitron', sans-serif;" placeholder="Enter your name" required>
+                        <input type="text" name="room" style="font-family:'Orbitron', sans-serif;" placeholder="Enter room name" required>
+                        <input type="file" name="video" style="font-family:'Orbitron', sans-serif;" accept="video/mp4" required>
+                        <input type="submit" style="font-family:'Orbitron', sans-serif;" value="Create room & upload video">
+                    </form> 
+                    <button class="toggle-btn" style="font-family:'Orbitron', sans-serif;" onclick="slide_to_join()">Want to join a existing room?</button>
+                </div>
+            </div>
+            <div class="form-container">
+                <div class="form-box">
+                    <h2>Join a existing room</h2>
+                    <form id="join-room-form">
+                        <input type="text" id="room" placeholder="Enter room name" required>
+                        <input type="text" id="username" placeholder="Enter your name" required>
+                        <input type="submit" value="join room">
+                    </form>
+                    <button class="toggle-btn" onclick="slide_to_create()">Back to create room</button>
+                </div>
+            </div>
+        </div>
+    </div>
+        <script>
+            const slider=document.getElementById('slider');
+            function slide_to_create(){
+                slider.style.transform='translateX(0)';
+            }
+            function slide_to_join(){
+                slider.style.transform='translateX(-50%)';
+            }
+            document.getElementById('join-room-form').addEventListener("submit",function(e){
+                e.preventDefault();
+                const room=document.getElementById('room').value;
+                const username=document.getElementById('username').value;
+                window.location.href=`/join/${room}?username=${encodeURIComponent(username)}`;
+            });
+        </script>
+    </div>
+</body>   
+</html> 
