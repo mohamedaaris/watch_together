@@ -156,6 +156,5 @@ def handle_chat_message(data):
 
 
 if __name__=='__main__':
-    hostname=socket.gethostname()
-    local_ip=socket.gethostbyname(hostname)
-    socketio.run(app,host=local_ip, port=5000,debug=True)
+    port=int(os.environ.get('PORT',5000))
+    socketio.run(app,host='0.0.0.0', port=port)
