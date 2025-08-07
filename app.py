@@ -43,9 +43,12 @@ def login_required(f):
         return f(*args,**kwargs)
     return dec_function 
 
-@app.before_first_request
-def createdb():
-     db.create_all()
+@app.before_request
+def create_db_once():
+    if not hasattr(app, 'db_created'):
+        db.create_all()
+        app.db_created = True
+
 
 @app.route('/')
 def index():
