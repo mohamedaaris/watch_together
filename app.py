@@ -46,7 +46,11 @@ def login_required(f):
 with app.app_context():
     db.create_all()
 
-
+@app.errorhandler(500)
+def internal_error(error):
+    import traceback
+    print(traceback.format_exc())
+    return "500 error", 500
 
 @app.route('/')
 def index():
