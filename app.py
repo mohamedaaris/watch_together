@@ -11,7 +11,7 @@ import os,socket
 
 app=Flask(__name__)
 app.secret_key='my_secretkey'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['UPLOAD_FOLDER']='static/uploads'
 socketio=SocketIO(app,cors_allowed_origins='*',async_mode='eventlet')
 db=SQLAlchemy(app)
@@ -43,11 +43,9 @@ def login_required(f):
         return f(*args,**kwargs)
     return dec_function 
 
-@app.before_request
-def create_db_once():
-    if not hasattr(app, 'db_created'):
-        db.create_all()
-        app.db_created = True
+with app.app_context():
+    db.create_all()
+
 
 
 @app.route('/')
