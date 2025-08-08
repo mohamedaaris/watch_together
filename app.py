@@ -26,7 +26,7 @@ class User(db.Model):
 
 class Room(db.Model):
     id=db.Column(db.Integer,primary_key=True)
-    name=db.Column(db.String(250),Unique=True,nullable=False)
+    name=db.Column(db.String(250),unique=True,nullable=False)
     host_id=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=False)
 
 class loginform(FlaskForm):
