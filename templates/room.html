@@ -191,6 +191,12 @@
 <body>
     <div class="container">
         <h2>Room code:{{room}}</h2>
+        {% if is_host %}
+        <p>You are the host!</p>
+        {% else %}
+        <p>You are a participant.</p>
+        {% endif %}
+
         <p>Welcome {{username}}!</p>
         <video id="videoPlayer" controls>
             <source src="{{url_for('uploaded_file',filename=room+'.mp4')}}" type="video/mp4">

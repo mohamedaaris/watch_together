@@ -8,6 +8,7 @@ from werkzeug.utils import secure_filename
 from flask_socketio import SocketIO,emit,join_room
 from functools import wraps
 import os,socket
+from base64 import urlsafe_b64encode,urlsafe_b64decode
 
 app=Flask(__name__)
 app.secret_key='my_secretkey'
@@ -22,6 +23,11 @@ class User(db.Model):
     name=db.Column(db.String(250),unique=True,nullable=False)
     email=db.Column(db.String(250),unique=True,nullable=False)
     password=db.Column(db.String(250),nullable=False)
+
+class Room(db.Model):
+    id=db.Column(db.Integer,primary_key=True)
+    name=db.Column(db.String(250),Unique=True,nullable=False)
+    host_id=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=False)
 
 class loginform(FlaskForm):
     email=StringField('Email', validators=[DataRequired(),Email()])
@@ -52,6 +58,12 @@ def internal_error(error):
     print(traceback.format_exc())
     return "500 error", 500
 
+def encrypt_username(username):
+    return urlsafe_b64encode(username.encode()).decode()
+
+def decrypt_username(encoded):
+    return urlsafe_b64decode(encoded.encode()).decode()
+
 @app.route('/')
 def index():
     if 'user_id' in session:
@@ -81,7 +93,6 @@ def Signup():
         db.session.add(new_user)
         db.session.commit()
         session['user_id']=new_user.id
-        print(f"New signup -> Email: {form.email.data}, Password: {form.password.data}")
         flash('Email registered successfully','success')
         return redirect(url_for('login'))
     return render_template('Signup.html',form=form)
@@ -93,7 +104,6 @@ def login():
         user=User.query.filter_by(email=form.email.data).first()
         if user and check_password_hash(user.password,form.password.data):
             session['user_id']=user.id
-            print(f"New signup -> Email: {form.email.data}, Password: {form.password.data}")
             flash("login successfull","success")
             return redirect(url_for('home'))
         else:
@@ -105,27 +115,40 @@ def login():
 def create_room():
     room=request.form['room']
     video=request.files['video']
-    username='host'
+    user=User.query.get(session['user_id'])
     if video:
         filename=secure_filename(f"{room}.mp4")
         video_path=os.path.join(app.config['UPLOAD_FOLDER'],filename)
         video.save(video_path)
-        return redirect(url_for('room',room=room,username=username))
+        new_room = Room(name=room, host_id=user.id)
+        db.session.add(new_room)
+        db.session.commit()
+        encrypted_username=encrypt_username(user.name)
+        return redirect(url_for('room',room=room,encrypted_username=encrypted_username))
     return 'Video Upload failed',400
 
 @app.route('/join/<room>')
 @login_required
 def join_room_by_link(room):
-    username=request.args.get('username')
-    if not username:
-        user = User.query.get(session['user_id'])
-        username = user.name if user else 'guest'
-    return redirect(url_for('room',room=room,username=username))
+    user=User.query.get(session['user_id'])
+    encrypted_username=encrypt_username(user.name)
+    return redirect(url_for('room',room=room,encrypted_username=encrypted_username))
 
-@app.route('/room/<room>/<username>')
+@app.route('/room/<room>/<encrypted_username>')
 @login_required
-def room(room,username):
-    return render_template('room.html',room=room,username=username)
+def room(room,encrypted_username):
+    try:
+        actual_username=decrypt_username(encrypted_username)
+    except Exception:
+        flash("Invalid room link","error")
+        return redirect(url_for("home"))
+    user=User.query.get(session['user_id'])
+    room_obj=Room.query.filter_by(name=room).first()
+    if not room_obj:
+        flash("Room does not exist",'error')
+        return redirect(url_for("home"))
+    is_host=room_obj.host_id==user.id
+    return render_template('room.html',room=room,username=actual_username,is_host=is_host)
 
 @app.route('/static/uploads/<filename>')
 @login_required
