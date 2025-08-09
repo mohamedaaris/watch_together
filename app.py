@@ -11,7 +11,7 @@ import os,socket,re
 from base64 import urlsafe_b64encode,urlsafe_b64decode
 
 app=Flask(__name__)
-app.secret_key='my_secretkey'
+app.secret_key=os.environ.get("SECRET_KEY") or "dev-secret"
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['UPLOAD_FOLDER']='static/uploads'
 socketio=SocketIO(app,cors_allowed_origins='*',async_mode='eventlet')
@@ -52,10 +52,12 @@ def login_required(f):
 
 def convert_link(share_link):
     match=re.search(r'/d/([a-zA-Z0-9_-]+)',share_link)
+    if not match:
+        match = re.search(r'id=([a-zA-Z0-9_-]+)', share_link)
     if match:
         file_id=match.group(1)
         return f"https://drive.google.com/uc?export=download&id={file_id}"
-    return None
+    return share_link
 
 with app.app_context():
     db.create_all()
@@ -122,26 +124,28 @@ def login():
 @login_required
 def create_room():
     room=request.form['room']
-    video=request.files['video']
-    video_url=request.form['video_url']
+    video=request.files.get('video')
+    video_url=request.form.get('video_url')
     user=User.query.get(session['user_id'])
+
     if not room:
         flash("Room name is required","error")
         return redirect(url_for("home"))
+    
     existing=Room.query.filter_by(name=room).first()
+
     if existing:
         flash("Room already exist. Choose another","error")
         return redirect(url_for('home'))
+    
     if video and video.filename:
         filename=secure_filename(f"{room}.mp4")
         video_path=os.path.join(app.config['UPLOAD_FOLDER'],filename)
         video.save(video_path)
-        saved_url=None
-        if video_url:
-            drive_link=convert_link(video_url)
-            saved_url=drive_link
-        else:
-            saved_url=video_url
+        saved_url=url_for("uploaded_file",filename=filename)
+
+    elif video_url:
+        saved_url=convert_link(video_url) or video_url
     else:
         flash("Provide either a video file or a public video URL", "error")
         return redirect(url_for("home"))
@@ -175,7 +179,7 @@ def room(room,encrypted_username):
     is_host=room_obj.host_id==user.id
     return render_template('room.html',room=room,username=actual_username,is_host=is_host,drive_link=room_obj.video_url)
 
-@app.route('/static/uploads/<filename>')
+@app.route('static/uploads/<filename>')
 @login_required
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'],filename)
