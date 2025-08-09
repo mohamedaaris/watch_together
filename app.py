@@ -114,7 +114,7 @@ def login():
 @login_required
 def create_room():
     room=request.form['room']
-    video=request.file.get('video')
+    video=request.files.get('video')
     music_files=request.files.getlist('music_files')
     user=User.query.get(session['user_id'])
     existing=Room.query.filter_by(name=room).first()
