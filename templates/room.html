@@ -199,7 +199,11 @@
 
         <p>Welcome {{username}}!</p>
         <video id="videoPlayer" controls>
-            <source src="{{url_for('uploaded_file',filename=room+'.mp4')}}" type="video/mp4">
+            {% if drive_link %}
+                <source src="{{drive_link}}" type="video/mp4">
+            {% else %}
+                <source src="{{url_for('uploaded_file',filename=room+'.mp4')}}" type="video/mp4">
+            {% endif %}
             your browser does not support this video tag.
         </video>
         <div class="link-box">

@@ -7,7 +7,7 @@ from werkzeug.security import check_password_hash,generate_password_hash
 from werkzeug.utils import secure_filename
 from flask_socketio import SocketIO,emit,join_room
 from functools import wraps
-import os,socket
+import os,socket,re
 from base64 import urlsafe_b64encode,urlsafe_b64decode
 
 app=Flask(__name__)
@@ -28,6 +28,7 @@ class Room(db.Model):
     id=db.Column(db.Integer,primary_key=True)
     name=db.Column(db.String(250),unique=True,nullable=False)
     host_id=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=False)
+    video_url=db.Column(db.String(2000),nullable=True)
 
 class loginform(FlaskForm):
     email=StringField('Email', validators=[DataRequired(),Email()])
@@ -48,6 +49,13 @@ def login_required(f):
             return redirect(url_for('login'))
         return f(*args,**kwargs)
     return dec_function 
+
+def convert_link(share_link):
+    match=re.search(r'/d/([a-zA-Z0-9_-]+)',share_link)
+    if match:
+        file_id=match.group(1)
+        return f"https://drive.google.com/uc?export=download&id={file_id}"
+    return None
 
 with app.app_context():
     db.create_all()
@@ -115,17 +123,34 @@ def login():
 def create_room():
     room=request.form['room']
     video=request.files['video']
+    video_url=request.form['video_url']
     user=User.query.get(session['user_id'])
-    if video:
+    if not room:
+        flash("Room name is required","error")
+        return redirect(url_for("home"))
+    existing=Room.query.filter_by(name=room).first()
+    if existing:
+        flash("Room already exist. Choose another","error")
+        return redirect(url_for('home'))
+    if video and video.filename:
         filename=secure_filename(f"{room}.mp4")
         video_path=os.path.join(app.config['UPLOAD_FOLDER'],filename)
         video.save(video_path)
-        new_room = Room(name=room, host_id=user.id)
-        db.session.add(new_room)
-        db.session.commit()
-        encrypted_username=encrypt_username(user.name)
-        return redirect(url_for('room',room=room,encrypted_username=encrypted_username))
-    return 'Video Upload failed',400
+        saved_url=None
+        if video_url:
+            drive_link=convert_link(video_url)
+            saved_url=drive_link
+        else:
+            saved_url=video_url
+    else:
+        flash("Provide either a video file or a public video URL", "error")
+        return redirect(url_for("home"))
+
+    new_room = Room(name=room, host_id=user.id,video_url=saved_url)
+    db.session.add(new_room)
+    db.session.commit()
+    encrypted_username=encrypt_username(user.name)
+    return redirect(url_for('room',room=room,encrypted_username=encrypted_username))
 
 @app.route('/join/<room>')
 @login_required

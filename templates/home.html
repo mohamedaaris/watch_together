@@ -155,6 +155,12 @@
             cursor: pointer;
             margin-top: 20px;
         }
+        .or-separator {
+            text-align: center;
+            font-weight: bold;
+            color: cyan;
+            margin: 10px 0;
+        }
 
         /* Tablet screens (600px - 1024px) */
 @media (min-width: 601px) and (max-width: 1024px) {
@@ -235,10 +241,12 @@
             <div class="form-container">
                 <div class="form-box">
                     <h2>create a watch room</h2>
-                    <form action="{{url_for('create_room')}}" method="POST" enctype="multipart/form-data">
+                    <form id="create-room-form" action="{{url_for('create_room')}}" method="POST" enctype="multipart/form-data">
                         <input type="text" name="username" style="font-family:'Orbitron', sans-serif;" placeholder="Enter your name" required>
                         <input type="text" name="room" style="font-family:'Orbitron', sans-serif;" placeholder="Enter room name" required>
-                        <input type="file" name="video" style="font-family:'Orbitron', sans-serif;" accept="video/mp4" required>
+                        <input type="file" name="video" style="font-family:'Orbitron', sans-serif;" accept="video/mp4">
+                        <div class="or_separator">-- OR --</div>
+                        <input type="url" name="video_url" style="font-family: 'Orbitron', sans-serif;" placeholder="Paste video URL">
                         <input type="submit" style="font-family:'Orbitron', sans-serif;" value="Create room & upload video">
                     </form> 
                     <button class="toggle-btn" style="font-family:'Orbitron', sans-serif;" onclick="slide_to_join()">Want to join a existing room?</button>
@@ -270,6 +278,14 @@
                 const room=document.getElementById('room').value;
                 const username=document.getElementById('username').value;
                 window.location.href=`/join/${room}?username=${encodeURIComponent(username)}`;
+            });
+            document.getElementById("create-room-form").addEventListener("submit",function(e){
+                const fileInput=this.querySelector('input[name="video"]');
+                const urlInput=this.querySelector('input[name="video_url"]');
+                if (!fileInput.value && !urlInput.value){
+                    e.preventDefault();
+                    alert("Please upload a video OR enter a video URL.")
+                }
             });
         </script>
     </div>
