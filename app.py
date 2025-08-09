@@ -157,7 +157,10 @@ def create_room():
 def join_room_by_link(room):
     user=User.query.get(session['user_id'])
     encrypted_username=encrypt_username(user.name)
-    return redirect(url_for('room',room=room,encrypted_username=encrypted_username))
+    if session.get('music_files_' + room):
+        return redirect(url_for('music_room', room=room, encrypted_username=encrypted_username))
+    else:
+        return redirect(url_for('room',room=room,encrypted_username=encrypted_username))
 
 @app.route('/room/<room>/<encrypted_username>')
 @login_required
