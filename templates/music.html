@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Room: {{ room }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(to bottom, #000, #111);
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 700px;
+            width: 95%;
+            margin: 30px auto;
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        p {
+            text-align: center;
+        }
+
+        /* Playlist */
+        .playlist {
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #00c9ff;
+            border-radius: 10px;
+            box-shadow: 0 0 12px #00c9ff;
+            max-height: 220px;
+            overflow-y: auto;
+            width: 100%;
+            padding: 0;
+            margin: 25px 0;
+            list-style: none;
+        }
+
+        .playlist li {
+            padding: 7px 12px;
+            border-bottom: 1px solid #222;
+            cursor: pointer;
+            color: #00c9ff;
+            user-select: none;
+        }
+
+        .playlist li.active {
+            background: #00c9ff;
+            color: black;
+            font-weight: bold;
+        }
+
+        .playlist li:last-child {
+            border-bottom: none;
+        }
+
+        /* Audio Player */
+        .audio-player-wrap {
+            text-align: center;
+            margin: 10px 0 20px;
+        }
+
+        audio {
+            width: 95%;
+            max-width: 500px;
+            margin: 10px 0;
+            outline: none;
+        }
+
+        .controls {
+            margin-top: 10px;
+        }
+
+        .controls button {
+            background: #00c9ff;
+            color: black;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 17px;
+            margin: 0 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s;
+            box-shadow: 0 0 8px #00c9ff;
+            user-select: none;
+        }
+
+        .controls button:active {
+            transform: scale(0.96);
+        }
+
+        #nowPlaying {
+            display: block;
+            margin-top: 8px;
+            color: cyan;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        /* Chat */
+        .chat-box {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            margin: 20px auto;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            height: 300px;
+            box-shadow: 0 0 15px #00c9ff;
+            border: 1px solid #00c9ff;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        #chatArea {
+            flex: 1;
+            overflow-y: auto;
+            background: #111;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+        }
+
+        .message {
+            margin: 8px 0;
+            padding: 10px 15px;
+            border-radius: 10px;
+            max-width: 75%;
+            word-wrap: break-word;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.4);
+        }
+
+        .self {
+            background: #00c9ff;
+            color: black;
+            align-self: flex-end;
+            text-align: right;
+            box-shadow: 0 0 8px #00c9ff;
+        }
+
+        .other {
+            background: #222;
+            color: white;
+            align-self: flex-start;
+            text-align: left;
+            box-shadow: 0 0 8px #00c9ff;
+        }
+
+        .chat-input-area {
+            display: flex;
+            gap: 10px;
+        }
+
+        #chatInput {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #00c9ff;
+            border-radius: 6px;
+            background: #000;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+
+        #sendBtn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            background-color: #00c9ff;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 0 10px #00c9ff, 0 0 20px #00c9ff;
+            transition: transform 0.1s ease;
+        }
+
+        #sendBtn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
+        }
+
+        /* Room link */
+        .link-box {
+            text-align: center;
+            margin-top: 15px;
+            margin-bottom: 20px;
+        }
+
+        .link-box input[type="text"] {
+            background-color: #000;
+            border: 1px solid #00c9ff;
+            padding: 8px;
+            color: #00c9ff;
+            border-radius: 6px;
+            width: 80%;
+            max-width: 500px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 16px;
+            user-select: all;
+        }
+
+        .copy-button {
+            margin-top: 10px;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            background-color: #00c9ff;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: 'Orbitron', sans-serif;
+            box-shadow: 0 0 10px #00c9ff, 0 0 20px #00c9ff;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            user-select: none;
+        }
+
+        .copy-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
+        }
+
+        /* Responsive */
+        @media screen and (max-width: 600px) {
+            .chat-box {
+                height: 300px;
+                padding: 8px;
+                width: 95%;
+            }
+
+            .message {
+                font-size: 0.85rem;
+                max-width: 90%;
+            }
+
+            #chatInput {
+                font-size: 0.9rem;
+            }
+
+            #sendBtn {
+                padding: 6px 10px;
+                font-size: 0.9rem;
+            }
+
+            .chat-input-area {
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .playlist {
+                max-height: 160px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Music Room code:{{room}}</h2>
+        {% if is_host %}
+        <p>You are the host!</p>
+        {% else %}
+        <p>You are a participant.</p>
+        {% endif %}
+
+        <p>Welcome {{username}}!</p>
+        <div class="playlist-wrap">
+            <h4>Music Queue</h4>
+            <ul id="playlist" class="playlist">
+                {% for track in music_files %}
+                <li data-index="{{loop.index0}}" data-src="{{url_for('uploaded_music_files',room=room,filename=track)}}">
+                    {{ track }}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="audio-player-wrap">
+            <audio id="audioplayer" controls></audio>
+            <div id="controls">
+                <button id="prevBtn">Prev</button>
+                <button id="playBtn">Play</button>
+                <button id="pauseBtn">Pause</button>
+                <button id="nextBtn">Next</button>
+                <button id="shuffleBtn">Shuffle</button>
+            </div>
+            <span id="nowPlaying"></span>
+        </div>
+
+        <div class="link-box">
+            Share this room: <br>
+            <input type="text" id="room-link" value="{{ request.host_url }}join/{{ room }}" readonly
+                style="width:80%; font-size:16px;">
+            <br>
+            <button onclick="copyLink()" class="copy-button">Copy Room link</button>
+        </div>
+
+        <div class="chat-box">
+            <div id="chatArea"></div>
+            <div class="chat-input-area">
+                <input type="text" id="chatInput" placeholder="Type a message...">
+                <button id="sendBtn">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        const room = "{{room}}";
+        const username = "{{username}}";
+
+        const playlist = []
+        document.querySelectorAll('#playlist li').forEach(li => {
+            playlist.push({
+                name: li.textContent.trim(),
+                src: li.getAttribute('data-src')
+            });
+        });
+        let currentTrack = 0;
+        const audio = document.getElementById("audioplayer");
+        const nowPlaying = document.getElementById("nowPlaying");
+        let issync = false;
+
+        function loadTrack(idx, autoplay = false, seek = 0) {
+            currentTrack = idx;
+            audio.src = playlist[idx].src;
+            nowPlaying.textContent = 'Now Playing' + playlist[idx].name;
+            document.querySelectorAll('#playlist li').forEach((li, i) => {
+                li.classList.toggle('active', i === idx);
+            });
+            if (seek) audio.currentTime = seek;
+            if (autoplay) audio.play().catch(e => console.warn("Play blocked", e));
+        }
+        loadTrack(0, false);
+        document.querySelectorAll('#playlist li').forEach((li, idx) => {
+            li.onclick = () => {
+                socket.emit('track_change', { track: idx, room });
+            }
+        });
+        document.getElementById("nextBtn").onclick = () => {
+            let next = (currentTrack + 1) % playlist.length;
+            socket.emit('track_change', { track: next, room });
+        }
+        document.getElementById("prevBtn").onclick = () => {
+            let prev = (currentTrack - 1 + playlist.length) % playlist.length;
+            socket.emit('track_change', { track: prev, room });
+        }
+        document.getElementById("shuffleBtn").onclick = () => {
+            let idx = Math.floor(Math.random() * playlist.length);
+            socket.emit("track_change", { track: idx, room })
+        }
+        document.getElementById("playBtn").onclick = () => {
+            socket.emit("music_event", { action: "play", room, time: audio.currentTime, track: currentTrack })
+        }
+        document.getElementById("pauseBtn").onclick = () => {
+            socket.emit("music_event", { action: "pause", room, time: audio.currentTime, track: currentTrack })
+        }
+
+        audio.addEventListener('play', () => {
+            if (!issync) {
+                socket.emit('music_event', { action: "play", time: audio.currentTime, room });
+            }
+        });
+        audio.addEventListener('pause', () => {
+            if (!issync) {
+                socket.emit('music_event', { action: "pause", time: audio.currentTime, room });
+            }
+        });
+        audio.addEventListener("ended", () => {
+            let next = (currentTrack + 1) % playlist.length;
+            socket.emit("track_change", { track: next, room });
+        })
+        audio.addEventListener('ratechange', () => {
+            socket.emit('music_speed', {
+                speed: audio.playbackRate,
+                room: room
+            });
+        });
+
+        socket.on('music_event', data => {
+            if (data.track != currentTrack) {
+                loadTrack(data.track, true, data, time);
+            }
+            if (Math.abs(audio.currentTime - data.time) > 0.5) {
+                audio.currentTime = data.time;
+            }
+            issync = true;
+            if (data.action === 'play' && audio.paused) audio.play().catch(e => console.warn("Autoplay blocked:", e));
+            if (data.action === 'pause' && !audio.paused) audio.pause();
+            setTimeout(() => { issync = false; }, 200);
+        });
+        socket.on("track_change", data => {
+            loadTrack(data.track, true, 0);
+        })
+        socket.on('music_speed', data => {
+            audio.playbackRate = data.speed;
+        });
+
+        const chatArea = document.getElementById("chatArea");
+        const chatInput = document.getElementById("chatInput");
+        const sendBtn = document.getElementById("sendBtn");
+
+        function sendmessage() {
+            const msg = chatInput.value.trim();
+            if (msg) {
+                socket.emit("chat_message", { room, username, message: msg });
+                chatInput.value = "";
+            }
+        }
+        sendBtn.onclick = sendmessage;
+        chatInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') sendmessage();
+        })
+        socket.on("chat_message", data => {
+            const div = document.createElement('div');
+            div.classList.add('message');
+            const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+            div.innerHTML = `<strong>${data.username}</strong><br>${data.message}<br><small>${time}</small>`;
+            div.classList.add(data.username === username ? 'self' : 'other');
+            chatArea.appendChild(div);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        });
+
+        function copyLink() {
+            const link = document.getElementById('room-link');
+            link.select();
+            document.execCommand('copy');
+            alert("link is copied to clipboard!");
+        }
+    </script>
+
+</body>

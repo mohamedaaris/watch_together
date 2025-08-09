@@ -114,22 +114,43 @@ def login():
 @login_required
 def create_room():
     room=request.form['room']
-    video=request.files['video']
+    video=request.file.get('video')
+    music_files=request.files.getlist('music_files')
     user=User.query.get(session['user_id'])
     existing=Room.query.filter_by(name=room).first()
     if existing:
         flash("Room already exist. Choose another","error")
         return redirect(url_for("home"))
-    if video:
+    new_room = Room(name=room, host_id=user.id)
+    db.session.add(new_room)
+    db.session.commit()
+    if video and video.filename!="":
         filename=secure_filename(f"{room}.mp4")
         video_path=os.path.join(app.config['UPLOAD_FOLDER'],filename)
         video.save(video_path)
-        new_room = Room(name=room, host_id=user.id)
-        db.session.add(new_room)
-        db.session.commit()
         encrypted_username=encrypt_username(user.name)
         return redirect(url_for('room',room=room,encrypted_username=encrypted_username))
-    return 'Video Upload failed',400
+    
+    elif music_files and any(f.filename!="" for f in music_files):
+        music_folder=os.path.join(app.config['UPLOAD_FOLDER'],room)
+        os.makedirs(music_folder,exist_ok=True)
+        
+        saved_files=[]
+        for f in music_files:
+            if f.filename==" ":
+                continue
+            filename=secure_filename(f.filename)
+            file_path=os.path.join(music_folder,filename)
+            f.save(file_path)
+            saved_files.append(filename)
+            
+        session['music_files_'+room]=saved_files
+        encrypted_username=encrypt_username(user.name)
+        return redirect(url_for('music_room',room=room,encrypted_username=encrypted_username))
+    else:
+        flash("No valid files are uploaded","error")
+        return redirect(url_for("home"))
+            
 
 @app.route('/join/<room>')
 @login_required
@@ -154,10 +175,36 @@ def room(room,encrypted_username):
     is_host=room_obj.host_id==user.id
     return render_template('room.html',room=room,username=actual_username,is_host=is_host)
 
+@app.route('/music_room/<room>/<encrypted_username>')
+@login_required
+def music_room(room,encrypted_username):
+    try:
+        actual_username=decrypt_username(encrypted_username)
+    except Exception:
+        flash("Invalid room link","error")
+        return redirect(url_for("home"))
+    user=User.query.get(session['user_id'])
+    room_obj=Room.query.filter_by(name=room).first()
+    if not room_obj:
+        flash("Room does not exist",'error')
+        return redirect(url_for("home"))
+    is_host=room_obj.host_id==user.id
+    
+    music_files=session.get('music_files_'+room)
+    if not music_files:
+        flash("No music files found in this room","error")
+        return redirect(url_for("home"))
+    return render_template('music.html',room=room,username=actual_username,is_host=is_host,music_files=music_files)
+
 @app.route('/static/uploads/<filename>')
 @login_required
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'],filename)
+
+@app.route('/static/uploads/<room>/<filename>')
+@login_required
+def uploaded_music_files(room,filename):
+    return send_from_directory(os.path.join(app.config['UPLOAD_FOLDER'],room),filename)
 
 @socketio.on('join_event')
 def handle_join_room(data):
@@ -172,7 +219,28 @@ def handle_video_event(data):
         'action': data['action'],
         'time': data['time']
     }, room=data['room'])
+    
+@socketio.on('music_event')
+def handle_music_event(data):
+    emit('music_event',{
+        'action': data['action'],
+        'time': data['time'],
+        'track':data.get("track")
+    }, room=data['room'])
 
+@socketio.on('track_change')
+def handle_track_change(data):
+    emit('track_change', {
+        'track': data['track']
+    }, room=data['room'])
+
+
+@socketio.on('music_speed')
+def handle_music_speed(data):
+    emit('music_speed', {
+        'speed': data['speed']
+    }, room=data['room'])
+    
 @socketio.on('speed_event')
 def handle_speed_event(data):
     emit('speed_event', {

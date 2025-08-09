@@ -238,7 +238,10 @@
                     <form action="{{url_for('create_room')}}" method="POST" enctype="multipart/form-data">
                         <input type="text" name="username" style="font-family:'Orbitron', sans-serif;" placeholder="Enter your name" required>
                         <input type="text" name="room" style="font-family:'Orbitron', sans-serif;" placeholder="Enter room name" required>
-                        <input type="file" name="video" style="font-family:'Orbitron', sans-serif;" accept="video/mp4" required>
+                        <label>Upload a video</label>
+                        <input type="file" name="video" style="font-family:'Orbitron', sans-serif;" accept="video/mp4">
+                        <label>Or upload music files</label>
+                        <input type="file" name="music_files" style="font-family:'Orbitron', sans-serif;" accept="audio/*" multiple>
                         <input type="submit" style="font-family:'Orbitron', sans-serif;" value="Create room & upload video">
                     </form> 
                     <button class="toggle-btn" style="font-family:'Orbitron', sans-serif;" onclick="slide_to_join()">Want to join a existing room?</button>
