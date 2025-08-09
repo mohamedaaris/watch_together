@@ -7,11 +7,11 @@ from werkzeug.security import check_password_hash,generate_password_hash
 from werkzeug.utils import secure_filename
 from flask_socketio import SocketIO,emit,join_room
 from functools import wraps
-import os,socket,re
+import os,socket
 from base64 import urlsafe_b64encode,urlsafe_b64decode
 
 app=Flask(__name__)
-app.secret_key=os.environ.get("SECRET_KEY") or "dev-secret"
+app.secret_key='my_secretkey'
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['UPLOAD_FOLDER']='static/uploads'
 socketio=SocketIO(app,cors_allowed_origins='*',async_mode='eventlet')
@@ -28,8 +28,6 @@ class Room(db.Model):
     id=db.Column(db.Integer,primary_key=True)
     name=db.Column(db.String(250),unique=True,nullable=False)
     host_id=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=False)
-    video_url=db.Column(db.String(2000),nullable=True)
-    download_url=db.Column(db.String(2000))
 
 class loginform(FlaskForm):
     email=StringField('Email', validators=[DataRequired(),Email()])
@@ -50,17 +48,6 @@ def login_required(f):
             return redirect(url_for('login'))
         return f(*args,**kwargs)
     return dec_function 
-
-def convert_link(share_link,mode="stream"):
-    match=re.search(r'/d/([a-zA-Z0-9_-]+)',share_link)
-    if not match:
-        match = re.search(r'id=([a-zA-Z0-9_-]+)', share_link)
-    if match:
-        file_id=match.group(1)
-        if mode=="download":
-            return f"https://drive.google.com/uc?export=download&id={file_id}"
-        return f"https://drive.google.com/file/d/{file_id}/preview"
-    return share_link
 
 with app.app_context():
     db.create_all()
@@ -127,40 +114,22 @@ def login():
 @login_required
 def create_room():
     room=request.form['room']
-    video=request.files.get('video')
-    video_url=request.form.get('video_url')
+    video=request.files['video']
     user=User.query.get(session['user_id'])
-
-    if not room:
-        flash("Room name is required","error")
-        return redirect(url_for("home"))
-    
     existing=Room.query.filter_by(name=room).first()
-
     if existing:
         flash("Room already exist. Choose another","error")
-        return redirect(url_for('home'))
-    
-    if video and video.filename:
+        return redirect(url_for("home"))
+    if video:
         filename=secure_filename(f"{room}.mp4")
         video_path=os.path.join(app.config['UPLOAD_FOLDER'],filename)
         video.save(video_path)
-        saved_url=url_for("uploaded_file",filename=filename)
-        saved_download=saved_url
-
-    elif video_url:
-        saved_url = convert_link(video_url, mode="stream")
-        saved_download = convert_link(video_url, mode="download")
-        
-    else:
-        flash("Provide either a video file or a public video URL", "error")
-        return redirect(url_for("home"))
-
-    new_room = Room(name=room, host_id=user.id,video_url=saved_url,download_url=saved_download)
-    db.session.add(new_room)
-    db.session.commit()
-    encrypted_username=encrypt_username(user.name)
-    return redirect(url_for('room',room=room,encrypted_username=encrypted_username))
+        new_room = Room(name=room, host_id=user.id)
+        db.session.add(new_room)
+        db.session.commit()
+        encrypted_username=encrypt_username(user.name)
+        return redirect(url_for('room',room=room,encrypted_username=encrypted_username))
+    return 'Video Upload failed',400
 
 @app.route('/join/<room>')
 @login_required
@@ -183,7 +152,7 @@ def room(room,encrypted_username):
         flash("Room does not exist",'error')
         return redirect(url_for("home"))
     is_host=room_obj.host_id==user.id
-    return render_template('room.html',room=room,username=actual_username,is_host=is_host,drive_link=room_obj.video_url,download_link=room_obj.download_url)
+    return render_template('room.html',room=room,username=actual_username,is_host=is_host)
 
 @app.route('/static/uploads/<filename>')
 @login_required
