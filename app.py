@@ -179,7 +179,7 @@ def room(room,encrypted_username):
     is_host=room_obj.host_id==user.id
     return render_template('room.html',room=room,username=actual_username,is_host=is_host,drive_link=room_obj.video_url)
 
-@app.route('static/uploads/<filename>')
+@app.route('/static/uploads/<filename>')
 @login_required
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'],filename)
