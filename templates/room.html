@@ -206,6 +206,12 @@
             {% endif %}
             your browser does not support this video tag.
         </video>
+        {% if download_link %}
+            <a href="{{ download_link }}" target="_blank">
+                <button>Download Video</button>
+            </a>
+        {% endif %}
+
         <div class="link-box">
             Share this room: <br>
             <input type="text" id="room-link" value="{{ request.host_url }}join/{{ room }}" readonly

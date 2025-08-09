@@ -50,13 +50,15 @@ def login_required(f):
         return f(*args,**kwargs)
     return dec_function 
 
-def convert_link(share_link):
+def convert_link(share_link,mode="stream"):
     match=re.search(r'/d/([a-zA-Z0-9_-]+)',share_link)
     if not match:
         match = re.search(r'id=([a-zA-Z0-9_-]+)', share_link)
     if match:
         file_id=match.group(1)
-        return f"https://drive.google.com/uc?export=download&id={file_id}"
+        if mode=="download":
+            return f"https://drive.google.com/uc?export=download&id={file_id}"
+        return f"https://drive.google.com/file/d/{file_id}/preview"
     return share_link
 
 with app.app_context():
@@ -143,14 +145,17 @@ def create_room():
         video_path=os.path.join(app.config['UPLOAD_FOLDER'],filename)
         video.save(video_path)
         saved_url=url_for("uploaded_file",filename=filename)
+        saved_download=saved_url
 
     elif video_url:
-        saved_url=convert_link(video_url) or video_url
+        saved_url = convert_link(video_url, mode="stream")
+        saved_download = convert_link(video_url, mode="download")
+        
     else:
         flash("Provide either a video file or a public video URL", "error")
         return redirect(url_for("home"))
 
-    new_room = Room(name=room, host_id=user.id,video_url=saved_url)
+    new_room = Room(name=room, host_id=user.id,video_url=saved_url,download_url=saved_download)
     db.session.add(new_room)
     db.session.commit()
     encrypted_username=encrypt_username(user.name)
@@ -177,7 +182,7 @@ def room(room,encrypted_username):
         flash("Room does not exist",'error')
         return redirect(url_for("home"))
     is_host=room_obj.host_id==user.id
-    return render_template('room.html',room=room,username=actual_username,is_host=is_host,drive_link=room_obj.video_url)
+    return render_template('room.html',room=room,username=actual_username,is_host=is_host,drive_link=room_obj.video_url,download_link=room_obj.download_url)
 
 @app.route('/static/uploads/<filename>')
 @login_required
