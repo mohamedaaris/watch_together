@@ -173,7 +173,7 @@ def room(room,encrypted_username):
         flash("Room does not exist",'error')
         return redirect(url_for("home"))
     is_host=room_obj.host_id==user.id
-    return render_template('room.html',room=room,username=actual_username,is_host=is_host)
+    return render_template('room.html',room=room,username=actual_username,is_host=is_host,drive_link=room_obj.video_url)
 
 @app.route('/static/uploads/<filename>')
 @login_required
