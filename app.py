@@ -29,6 +29,7 @@ class Room(db.Model):
     name=db.Column(db.String(250),unique=True,nullable=False)
     host_id=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=False)
     video_url=db.Column(db.String(2000),nullable=True)
+    download_url=db.Column(db.String(2000))
 
 class loginform(FlaskForm):
     email=StringField('Email', validators=[DataRequired(),Email()])

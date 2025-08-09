@@ -137,7 +137,8 @@
             margin-top: 8px;
         }
 
-        .copy-button {
+        .copy-button,
+        .download-btn {
             margin-top: 10px;
             padding: 10px 16px;
             border: none;
@@ -151,7 +152,7 @@
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
-        .copy-button:hover {
+        .copy-button:hover,.download-btn:hover{
             transform: scale(1.05);
             box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
         }
@@ -207,7 +208,7 @@
             your browser does not support this video tag.
         </video>
         {% if download_link %}
-            <a href="{{ download_link }}" target="_blank">
+            <a  class="download-btn" href="{{ download_link }}" target="_blank">
                 <button>Download Video</button>
             </a>
         {% endif %}
