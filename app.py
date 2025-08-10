@@ -257,7 +257,7 @@ def handle_leave_room(data):
     if room in room_users and username in room_users[room]:
         room_users[room].remove(username)
     emit('chat_message', {'username': 'System', 'message': f'{username} has left the room.'}, room=room)
-    if room in room_users and len(room_users[room]==0):
+    if room in room_users and len(room_users[room])==0:
         del room_users[room]
         room_obj=Room.query.filter_by(name=room).first()
         if room_obj:

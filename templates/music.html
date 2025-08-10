@@ -17,7 +17,14 @@
             flex-direction: column;
             align-items: center;
         }
-
+        #vanta-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+        }
         .container {
             max-width: 700px;
             width: 95%;
@@ -286,6 +293,7 @@
 </head>
 
 <body>
+    <div id="vanta-bg"></div>
     <div class="container">
         <h2>Music Room code:{{room}}</h2>
         {% if is_host %}
@@ -335,7 +343,18 @@
             </div>
         </div>
     </div>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vanta@0.5.21/dist/vanta.halo.min.js"></script>
+    <script>
+        VANTA.HALO({
+            el: "#vanta-bg",
+            mouseControls: true,
+            touchControls: true,
+            gyroControls: false,
+            minHeight: 200.0,
+            minWidth: 200.0,
+        });
+    </script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
         const socket = io();
