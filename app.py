@@ -139,9 +139,12 @@ def create_room():
         db.session.commit()
         music_folder=os.path.join(app.config['UPLOAD_FOLDER'],room)
         os.makedirs(music_folder,exist_ok=True)
+        temp_zip_path=os.path.join(app.config['UPLOAD_FOLDER'],secure_filename(music_zip.filename))
+        music_zip.save(temp_zip_path)
         
         with zipfile.ZipFile(music_folder) as zip_ref:
             zip_ref.extractall(music_folder)
+        os.remove(temp_zip_path)
             
         saved_files=[]
         for root,dirs,files in os.walk(music_folder):
