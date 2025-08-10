@@ -219,6 +219,17 @@
             font-size: 16px;
             user-select: all;
         }
+        input[type="text"] {
+            background-color: #000;
+            border: 1px solid #00c9ff;
+            padding: 8px;
+            color: #00c9ff;
+            border-radius: 6px;
+            width: 90%;
+            max-width: 500px;
+            margin-top: 15px;
+            font-family: 'Orbitron', sans-serif;
+        }
 
         .copy-button {
             margin-top: 10px;
@@ -434,6 +445,27 @@
             });
         });
 
+        audio.addEventListener("seeked", () => {
+            socket.emit("seek_event", {
+                time: audio.currentTime,
+                room,
+                isPlaying: !audio.paused,
+            });
+        });
+
+        socket.on("sync_playback",(data)=>{
+            loadTrack(data.track,false,data,time)
+            issync=false
+            if(data.isPlaying){
+                audio.play().catch((e)=>console.warn("Audioplay blocked on sync:",e));
+            }
+            else{
+                audio.pause();
+            }
+            setTimeout(() => {
+                issync = false;
+            }, 200);
+        });
         socket.on('music_event', data => {
             if (data.track != currentTrack) {
                 loadTrack(data.track, true, data.time);
@@ -452,6 +484,24 @@
         socket.on('music_speed', data => {
             audio.playbackRate = data.speed;
         });
+
+        socket.on("seek_event", (data) => {
+            if (Math.abs(audio.currentTime - data.time) > 0.1) {
+                audio.currentTime = data.time;
+            }
+            if (data.isPlaying && audio.paused) {
+                audio.play().catch((e) =>
+                    console.warn("Play blocked during seek:", e)
+                );
+            } else if (!data.isPlaying && !audio.paused) {
+                audio.pause();
+            }
+        });
+
+        socket.on('user_joined', (data) => {
+            alert(`${data.username} has joined the room.`);
+        });
+
 
         const chatArea = document.getElementById("chatArea");
         const chatInput = document.getElementById("chatInput");

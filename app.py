@@ -262,7 +262,7 @@ def handle_leave_room(data):
         room_obj=Room.query.filter_by(name=room).first()
         if room_obj:
             db.session.delete(room_obj)
-            db.commit() 
+            db.session.commit() 
 @socketio.on('video_event')
 def handle_video_event(data):
     emit('video_event',{
