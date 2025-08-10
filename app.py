@@ -142,7 +142,7 @@ def create_room():
         temp_zip_path=os.path.join(app.config['UPLOAD_FOLDER'],secure_filename(music_zip.filename))
         music_zip.save(temp_zip_path)
         
-        with zipfile.ZipFile(music_folder) as zip_ref:
+        with zipfile.ZipFile(temp_zip_path,'r') as zip_ref:
             zip_ref.extractall(music_folder)
         os.remove(temp_zip_path)
             
