@@ -232,6 +232,24 @@
             transform: scale(1.05);
             box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
         }
+        #leaveRoomBtn {
+            margin-top: 15px;
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 0 10px #f44336, 0 0 20px #f44336;
+            transition: transform 0.2s ease;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        #leaveRoomBtn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #ff7961, 0 0 30px #ff7961;
+        }
 
         /* Responsive */
         @media screen and (max-width: 600px) {
@@ -277,6 +295,7 @@
         {% endif %}
 
         <p>Welcome {{username}}!</p>
+         <button id="leaveRoomBtn">Leave Room</button>
         <div class="playlist-wrap">
             <h4>Music Queue</h4>
             <ul id="playlist" class="playlist">
@@ -322,7 +341,10 @@
         const socket = io();
         const room = "{{room}}";
         const username = "{{username}}";
-
+        document.getElementById("leaveRoomBtn").onclick=()=>{
+            socket.emit('leave_room',{room,username});
+            window.location.href='/';
+        };
         const playlist = []
         document.querySelectorAll('#playlist li').forEach(li => {
             playlist.push({
@@ -338,7 +360,7 @@
         function loadTrack(idx, autoplay = false, seek = 0) {
             currentTrack = idx;
             audio.src = playlist[idx].src;
-            nowPlaying.textContent = 'Now Playing' + playlist[idx].name;
+            nowPlaying.textContent = 'Now Playing: ' + playlist[idx].name;
             document.querySelectorAll('#playlist li').forEach((li, i) => {
                 li.classList.toggle('active', i === idx);
             });
@@ -393,7 +415,7 @@
 
         socket.on('music_event', data => {
             if (data.track != currentTrack) {
-                loadTrack(data.track, true, data, time);
+                loadTrack(data.track, true, data.time);
             }
             if (Math.abs(audio.currentTime - data.time) > 0.5) {
                 audio.currentTime = data.time;
@@ -444,3 +466,4 @@
     </script>
 
 </body>
+</html>

@@ -5,9 +5,9 @@ from wtforms.validators import length, DataRequired, Email
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import check_password_hash,generate_password_hash
 from werkzeug.utils import secure_filename
-from flask_socketio import SocketIO,emit,join_room
+from flask_socketio import SocketIO,emit,join_room,leave_room
 from functools import wraps
-import os,socket
+import os,socket,zipfile
 from base64 import urlsafe_b64encode,urlsafe_b64decode
 
 app=Flask(__name__)
@@ -17,6 +17,7 @@ app.config['UPLOAD_FOLDER']='static/uploads'
 socketio=SocketIO(app,cors_allowed_origins='*',async_mode='eventlet')
 db=SQLAlchemy(app)
 os.makedirs(app.config['UPLOAD_FOLDER'],exist_ok=True)
+room_users={}
 
 class User(db.Model):
     id=db.Column(db.Integer,primary_key=True)
@@ -28,7 +29,8 @@ class Room(db.Model):
     id=db.Column(db.Integer,primary_key=True)
     name=db.Column(db.String(250),unique=True,nullable=False)
     host_id=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=False)
-
+    room_type = db.Column(db.String(20), nullable=False)
+    
 class loginform(FlaskForm):
     email=StringField('Email', validators=[DataRequired(),Email()])
     password=PasswordField('Password', validators=[DataRequired(), length(min=2, max=32)])
@@ -115,40 +117,45 @@ def login():
 def create_room():
     room=request.form['room']
     video=request.files.get('video')
-    music_files=request.files.getlist('music_files')
+    music_zip=request.files.get('music_zip')
     user=User.query.get(session['user_id'])
     existing=Room.query.filter_by(name=room).first()
     if existing:
         flash("Room already exist. Choose another","error")
         return redirect(url_for("home"))
-    new_room = Room(name=room, host_id=user.id)
-    db.session.add(new_room)
-    db.session.commit()
     if video and video.filename!="":
+        new_room = Room(name=room, host_id=user.id,room_type='video')
+        db.session.add(new_room)
+        db.session.commit()
         filename=secure_filename(f"{room}.mp4")
         video_path=os.path.join(app.config['UPLOAD_FOLDER'],filename)
         video.save(video_path)
         encrypted_username=encrypt_username(user.name)
         return redirect(url_for('room',room=room,encrypted_username=encrypted_username))
     
-    elif music_files and any(f.filename!="" for f in music_files):
+    elif music_zip and music_zip.filename!="":
+        new_room = Room(name=room, host_id=user.id,room_type='music')
+        db.session.add(new_room)
+        db.session.commit()
         music_folder=os.path.join(app.config['UPLOAD_FOLDER'],room)
         os.makedirs(music_folder,exist_ok=True)
         
+        with zipfile.ZipFile(music_folder) as zip_ref:
+            zip_ref.extractall(music_folder)
+            
         saved_files=[]
-        for f in music_files:
-            if f.filename==" ":
-                continue
-            filename=secure_filename(f.filename)
-            file_path=os.path.join(music_folder,filename)
-            f.save(file_path)
-            saved_files.append(filename)
+        for root,dirs,files in os.walk(music_folder):
+            for file in files:
+                if file.lower().endswith(('.mp3', '.wav', '.ogg', '.flac')):
+                    rel_dir=os.path.relpath(root,music_folder)
+                    rel_file=os.path.join(rel_dir,file) if rel_dir!='.' else file
+                    saved_files.append(rel_file)
             
         session['music_files_'+room]=saved_files
         encrypted_username=encrypt_username(user.name)
         return redirect(url_for('music_room',room=room,encrypted_username=encrypted_username))
     else:
-        flash("No valid files are uploaded","error")
+        flash("Please upload a video or a ZIP file with music tracks.","error")
         return redirect(url_for("home"))
             
 
@@ -157,10 +164,30 @@ def create_room():
 def join_room_by_link(room):
     user=User.query.get(session['user_id'])
     encrypted_username=encrypt_username(user.name)
-    if session.get('music_files_' + room):
-        return redirect(url_for('music_room', room=room, encrypted_username=encrypted_username))
-    else:
-        return redirect(url_for('room',room=room,encrypted_username=encrypted_username))
+    room_obj=Room.query.filter_by(name=room).first()
+    if not room_obj:
+        flash("Room does not exist", "error")
+        return redirect(url_for('home'))
+    if room_obj.room_type=='video':
+        return redirect(url_for('room', room=room, encrypted_username=encrypted_username))
+    elif room_obj.room_type == 'music':
+        music_path=os.path.join(app.config['UPLOAD_FOLDER'],room)
+        files = []
+        if os.path.isdir(music_path):
+            for root, dirs, filenames in os.walk(music_path):
+                for f in filenames:
+                    if f.lower().endswith(('.mp3', '.wav', '.ogg', '.flac')):
+                        files.append(os.path.relpath(os.path.join(root, f), music_path))
+        if files:
+            session['music_files_'+room]=files
+            return redirect(url_for('music_room', room=room, encrypted_username=encrypted_username))
+        else:
+            flash("No music files found in this room", "error")
+            return redirect(url_for('home'))
+    
+    flash("Invalid room type", "error")
+    return redirect(url_for('home'))
+        
 
 @app.route('/room/<room>/<encrypted_username>')
 @login_required
@@ -214,8 +241,25 @@ def handle_join_room(data):
     room=data['room']
     username=data['username']
     join_room(room)
+    if room not in room_users:
+        room_users[room]=set()
+    room_users[room].add(username)
     emit('user_joined',{'username':username},room=room)
-
+    
+@socketio.on('leave_room')
+def handle_leave_room(data):
+    room=data['room']
+    username=data['username']
+    leave_room(room)
+    if room in room_users and username in room_users[room]:
+        room_users[room].remove(username)
+    emit('chat_message', {'username': 'System', 'message': f'{username} has left the room.'}, room=room)
+    if room in room_users and len(room_users[room]==0):
+        del room_users[room]
+        room_obj=Room.query.filter_by(name=room).first()
+        if room_obj:
+            db.session.delete(room_obj)
+            db.commit() 
 @socketio.on('video_event')
 def handle_video_event(data):
     emit('video_event',{

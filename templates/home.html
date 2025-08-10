@@ -240,9 +240,9 @@
                         <input type="text" name="room" style="font-family:'Orbitron', sans-serif;" placeholder="Enter room name" required>
                         <label>Upload a video</label>
                         <input type="file" name="video" style="font-family:'Orbitron', sans-serif;" accept="video/mp4">
-                        <label>Or upload music files</label>
-                        <input type="file" name="music_files" style="font-family:'Orbitron', sans-serif;" accept="audio/*" multiple>
-                        <input type="submit" style="font-family:'Orbitron', sans-serif;" value="Create room & upload video">
+                        <label>Or upload a zip file containing music files</label>
+                        <input type="file" name="music_zip" style="font-family:'Orbitron', sans-serif;" accept=".zip" >
+                        <input type="submit" style="font-family:'Orbitron', sans-serif;" value="Create room & upload media">
                     </form> 
                     <button class="toggle-btn" style="font-family:'Orbitron', sans-serif;" onclick="slide_to_join()">Want to join a existing room?</button>
                 </div>
@@ -272,7 +272,7 @@
                 e.preventDefault();
                 const room=document.getElementById('room').value;
                 const username=document.getElementById('username').value;
-                window.location.href=`/join/${room}?username=${encodeURIComponent(username)}`;
+                window.location.href=`/join/${room}`;
             });
         </script>
     </div>
