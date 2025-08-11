@@ -17,7 +17,6 @@
             flex-direction: column;
             align-items: center;
         }
-
         #vanta-bg {
             position: fixed;
             top: 0;
@@ -26,7 +25,6 @@
             height: 100vh;
             z-index: -1;
         }
-
         .container {
             max-width: 700px;
             width: 95%;
@@ -221,7 +219,6 @@
             font-size: 16px;
             user-select: all;
         }
-
         input[type="text"] {
             background-color: #000;
             border: 1px solid #00c9ff;
@@ -253,7 +250,6 @@
             transform: scale(1.05);
             box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
         }
-
         #leaveRoomBtn {
             margin-top: 15px;
             background: #f44336;
@@ -318,13 +314,12 @@
         {% endif %}
 
         <p>Welcome {{username}}!</p>
-        <button id="leaveRoomBtn">Leave Room</button>
+         <button id="leaveRoomBtn">Leave Room</button>
         <div class="playlist-wrap">
             <h4>Music Queue</h4>
             <ul id="playlist" class="playlist">
                 {% for track in music_files %}
-                <li data-index="{{loop.index0}}"
-                    data-src="{{url_for('uploaded_music_files',room=room,filename=track)}}">
+                <li data-index="{{loop.index0}}" data-src="{{url_for('uploaded_music_files',room=room,filename=track)}}">
                     {{ track }}
                 </li>
                 {% endfor %}
@@ -378,9 +373,9 @@
         const username = "{{username}}";
         socket.emit('join_event', { room: room, username: username });
 
-        document.getElementById("leaveRoomBtn").onclick = () => {
-            socket.emit('leave_room', { room, username });
-            window.location.href = '/';
+        document.getElementById("leaveRoomBtn").onclick=()=>{
+            socket.emit('leave_room',{room,username});
+            window.location.href='/';
         };
         const playlist = []
         document.querySelectorAll('#playlist li').forEach(li => {
@@ -393,7 +388,7 @@
         const audio = document.getElementById("audioplayer");
         const nowPlaying = document.getElementById("nowPlaying");
         let issync = false;
-        let isSeeking = false;
+
         function loadTrack(idx, autoplay = false, seek = 0) {
             currentTrack = idx;
             audio.src = playlist[idx].src;
@@ -431,18 +426,14 @@
 
         audio.addEventListener('play', () => {
             if (!issync) {
-                socket.emit('music_event', { action: "play", time: audio.currentTime, room, track: currentTrack });
+                socket.emit('music_event', { action: "play", time: audio.currentTime, room });
             }
         });
         audio.addEventListener('pause', () => {
             if (!issync) {
-                socket.emit('music_event', { action: "pause", time: audio.currentTime, room, track: currentTrack });
+                socket.emit('music_event', { action: "pause", time: audio.currentTime, room });
             }
         });
-        audio.addEventListener('seeking', () => {
-            isSeeking = true;
-        });
-
         audio.addEventListener("ended", () => {
             let next = (currentTrack + 1) % playlist.length;
             socket.emit("track_change", { track: next, room });
@@ -457,20 +448,18 @@
         audio.addEventListener("seeked", () => {
             socket.emit("seek_event", {
                 time: audio.currentTime,
-                track: currentTrack,
                 room,
                 isPlaying: !audio.paused,
             });
-            setTimeout(() => { isSeeking = false; }, 200);
         });
 
-        socket.on("sync_playback", (data) => {
-            issync = true;
-            loadTrack(data.track, false, data.time);
-            if (data.isPlaying) {
-                audio.play().catch((e) => console.warn("Audioplay blocked on sync:", e));
+        socket.on("sync_playback",(data)=>{
+            loadTrack(data.track,false,data.time)
+            issync=false
+            if(data.isPlaying){
+                audio.play().catch((e)=>console.warn("Audioplay blocked on sync:",e));
             }
-            else {
+            else{
                 audio.pause();
             }
             setTimeout(() => {
@@ -478,13 +467,13 @@
             }, 200);
         });
         socket.on('music_event', data => {
-            issync = true;
             if (data.track != currentTrack) {
                 loadTrack(data.track, true, data.time);
             }
             if (Math.abs(audio.currentTime - data.time) > 0.5) {
                 audio.currentTime = data.time;
             }
+            issync = true;
             if (data.action === 'play' && audio.paused) audio.play().catch(e => console.warn("Autoplay blocked:", e));
             if (data.action === 'pause' && !audio.paused) audio.pause();
             setTimeout(() => { issync = false; }, 200);
@@ -497,17 +486,16 @@
         });
 
         socket.on("seek_event", (data) => {
-            issync = true;
-            if (data.track !== currentTrack) {
-                loadTrack(data.track, false);
+            if (Math.abs(audio.currentTime - data.time) > 0.1) {
+                audio.currentTime = data.time;
             }
-            audio.currentTime = data.time;
-            if (data.isPlaying) {
-                audio.play().catch(e => console.warn("Autoplay blocked during seek:", e));
-            } else {
+            if (data.isPlaying && audio.paused) {
+                audio.play().catch((e) =>
+                    console.warn("Play blocked during seek:", e)
+                );
+            } else if (!data.isPlaying && !audio.paused) {
                 audio.pause();
             }
-            setTimeout(() => { issync = false; }, 200);
         });
 
         socket.on('user_joined', (data) => {
@@ -549,5 +537,4 @@
     </script>
 
 </body>
-
 </html>
