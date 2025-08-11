@@ -291,14 +291,6 @@ def handle_music_speed(data):
         'speed': data['speed']
     }, room=data['room'])
     
-@socketio.on('seek_event')
-def handle_seek_event(data):
-    emit("seek_event",{
-        'time':data['time'],
-        "isplaying":data['isplaying'],
-        "track":data["track"]
-    },room=data['room'])
-    
 @socketio.on('speed_event')
 def handle_speed_event(data):
     emit('speed_event', {
