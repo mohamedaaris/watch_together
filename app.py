@@ -21,7 +21,7 @@ room_users={}
 
 class User(db.Model):
     id=db.Column(db.Integer,primary_key=True)
-    name=db.Column(db.String(250),unique=True,nullable=False)
+    name=db.Column(db.String(250),nullable=False)
     email=db.Column(db.String(250),unique=True,nullable=False)
     password=db.Column(db.String(250),nullable=False)
 
@@ -248,6 +248,12 @@ def handle_join_room(data):
         room_users[room]=set()
     room_users[room].add(username)
     emit('user_joined',{'username':username},room=room)
+    room_obj = Room.query.filter_by(name=room).first()
+    if room_obj and room_obj.room_type == 'music':
+        host_user = User.query.get(room_obj.host_id)
+        host_name = host_user.name if host_user else None
+        if host_name and host_name in room_users[room]:
+            emit('request_sync', {'target': username}, room=room, include_self=False)
     
 @socketio.on('leave_room')
 def handle_leave_room(data):
@@ -263,12 +269,34 @@ def handle_leave_room(data):
         if room_obj:
             db.session.delete(room_obj)
             db.session.commit() 
+        
+@socketio.on('send_sync')
+def handle_send_sync(data):
+    target = data['target']  
+    room = data['room']
+    track = data['track']
+    time_pos = data['time']
+    is_playing = data['isPlaying']
+    
+    emit('sync_playback', {
+        'track': track,
+        'time': time_pos,
+        'isPlaying': is_playing
+    }, room=room)
+    
 @socketio.on('video_event')
 def handle_video_event(data):
     emit('video_event',{
         'action': data['action'],
         'time': data['time']
     }, room=data['room'])
+    
+@socketio.on('seek_event')
+def handle_seek_event(data):
+    emit('seek_event', {
+        'time': data['time'],
+        'playing': data['playing'] 
+    }, room=data['room'], include_self=False)
     
 @socketio.on('music_event')
 def handle_music_event(data):

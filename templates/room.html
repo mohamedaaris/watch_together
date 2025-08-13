@@ -155,6 +155,7 @@
             transform: scale(1.05);
             box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
         }
+
         #leaveRoomBtn {
             margin-top: 15px;
             background: #f44336;
@@ -242,13 +243,18 @@
         const room = "{{room}}";
         const username = "{{username}}";
         const video = document.getElementById('videoPlayer');
+        let isseeking = false;
         socket.emit('join_event', { room, username });
-        document.getElementById("leaveRoomBtn").onclick=()=>{
-            socket.emit('leave_room',{room,username});
-            window.location.href='/';
+        document.getElementById("leaveRoomBtn").onclick = () => {
+            socket.emit('leave_room', { room, username });
+            window.location.href = '/';
         };
 
         let issync = false;
+        video.addEventListener('seeking', () => {
+            seeking = true;
+            socket.emit('seek_event', { time: video.currentTime, room });
+        });
         video.addEventListener('play', () => {
             if (!issync) {
                 socket.emit('video_event', { action: "play", time: video.currentTime, room });
@@ -264,6 +270,12 @@
                 speed: video.playbackRate,
                 room: room
             });
+        });
+        socket.on('seek_event', data => {
+            // Prevent infinite loop: only adjust if we’re not the seeker
+            if (Math.abs(video.currentTime - data.time) > 0.5) {
+                video.currentTime = data.time;
+            }
         });
 
         socket.on('video_event', data => {
