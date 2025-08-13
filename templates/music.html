@@ -140,7 +140,7 @@
             border-radius: 8px;
             margin-bottom: 12px;
             color: #fff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Orbitron', sans-serif;
             font-size: 14px;
         }
 
@@ -178,6 +178,7 @@
             flex: 1;
             padding: 10px;
             border: 1px solid #00c9ff;
+            font-family: 'Orbitron', sans-serif;
             border-radius: 6px;
             background: #000;
             color: #fff;
@@ -431,12 +432,12 @@
 
         audio.addEventListener('play', () => {
             if (!issync) {
-                socket.emit('music_event', { action: "play", time: audio.currentTime, room });
+                socket.emit('music_event', { action: "play", time: audio.currentTime, room,track: currentTrack });
             }
         });
         audio.addEventListener('pause', () => {
             if (!issync) {
-                socket.emit('music_event', { action: "pause", time: audio.currentTime, room });
+                socket.emit('music_event', { action: "pause", time: audio.currentTime, room ,track: currentTrack});
             }
         });
         audio.addEventListener("ended", () => {
@@ -451,16 +452,18 @@
         });
 
         audio.addEventListener("seeked", () => {
+            if (!issync) {
             socket.emit("seek_event", {
                 time: audio.currentTime,
                 room: room,
-                Playing: !audio.paused
+                isPlaying: !audio.paused
             });
+        }
         });
 
         socket.on("sync_playback", (data) => {
-            loadTrack(data.track, false, data.time)
-            issync = false
+             issync = true;
+            loadTrack(data.track, false, data.time);
             if (data.isPlaying) {
                 audio.play().catch((e) => console.warn("Audioplay blocked on sync:", e));
             }
@@ -482,16 +485,21 @@
                 });
             }
         });
-        socket.on('music_event', data => {
-            if (data.track != currentTrack) {
-                loadTrack(data.track, true, data.time);
-            }
-            if (Math.abs(audio.currentTime - data.time) > 0.5) {
+        socket.on("music_event", (data) => {
+            issync = true;
+
+            if (typeof data.track === "number" && data.track !== currentTrack) {
+                loadTrack(data.track, false, data.time);
+            } else if (Math.abs(audio.currentTime - data.time) > 0.1) {
                 audio.currentTime = data.time;
             }
-            issync = true;
-            if (data.action === 'play' && audio.paused) audio.play().catch(e => console.warn("Autoplay blocked:", e));
-            if (data.action === 'pause' && !audio.paused) audio.pause();
+
+            if (data.action === "play") {
+                audio.play().catch((e) => console.warn("Audio play blocked:", e));
+            } else if (data.action === "pause") {
+                audio.pause();
+            }
+
             setTimeout(() => { issync = false; }, 200);
         });
         socket.on("track_change", data => {
@@ -503,15 +511,20 @@
 
         socket.on("seek_event", (data) => {
             if (Math.abs(audio.currentTime - data.time) > 0.1) {
+                issync = true;
                 audio.currentTime = data.time;
+                setTimeout(() => { issync = false; }, 200);
             }
             if (data.isPlaying && audio.paused) {
+                issync = true;
                 audio.play().catch((e) =>
-                    console.warn("Play blocked during seek:", e)
-                );
+                {console.warn("Play blocked during seek:", e);});
+                setTimeout(() => { issync = false; }, 200);
             } else if (!data.isPlaying && !audio.paused) {
-                audio.pause();
-            }
+            issync = true;
+            audio.pause();
+            setTimeout(() => { issync = false; }, 200);
+        }
         });
 
         socket.on('user_joined', (data) => {

@@ -252,8 +252,8 @@
 
         let issync = false;
         video.addEventListener('seeking', () => {
-            seeking = true;
-            socket.emit('seek_event', { time: video.currentTime, room });
+            isseeking = true;
+            socket.emit('seek_event', { time: video.currentTime, isPlaying: !video.paused, room });
         });
         video.addEventListener('play', () => {
             if (!issync) {
@@ -272,10 +272,17 @@
             });
         });
         socket.on('seek_event', data => {
-            // Prevent infinite loop: only adjust if we’re not the seeker
+            issync = true;
             if (Math.abs(video.currentTime - data.time) > 0.5) {
                 video.currentTime = data.time;
             }
+            if (data.isPlaying && video.paused) {
+                video.play().catch(e => console.warn("Autoplay blocked on seek:", e));
+            } else if (!data.isPlaying && !video.paused) {
+                video.pause();
+            }
+
+            setTimeout(() => { issync = false; }, 200);
         });
 
         socket.on('video_event', data => {
