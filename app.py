@@ -51,7 +51,7 @@ def r2_put_fileobj(key:str,fileobj):
     
 def r2_generate_presigned_get(key:str, expires:3600):
     if R2_PUBLIC_DOMAIN:
-        return f"{R2_PUBLIC_DOMAIN.rstrip("/")}/{key}"
+        return f"{R2_PUBLIC_DOMAIN.rstrip('/')}/{key}"
     s3=r2_client()
     return s3.generate_presigned_url(
         "get_object",
