@@ -7,8 +7,12 @@ from werkzeug.security import check_password_hash,generate_password_hash
 from werkzeug.utils import secure_filename
 from flask_socketio import SocketIO,emit,join_room,leave_room
 from functools import wraps
-import os,socket,zipfile
+import os,socket,zipfile,io
 from base64 import urlsafe_b64encode,urlsafe_b64decode
+import boto3
+from botocore.config import Config
+from botocore.exceptions import ClientError
+from datetime import datetime,timezone
 
 app=Flask(__name__)
 app.secret_key='my_secretkey'
@@ -19,6 +23,70 @@ db=SQLAlchemy(app)
 os.makedirs(app.config['UPLOAD_FOLDER'],exist_ok=True)
 room_users={}
 
+R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID")
+R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
+R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY")
+R2_BUCKET = os.environ.get("R2_BUCKET")
+R2_PUBLIC_DOMAIN = os.environ.get("R2_PUBLIC_DOMAIN") 
+R2_ENDPOINT = os.environ.get("R2_ENDPOINT")
+
+STORAGE_THRESHOLD_BYTES = 9 * 1024 * 1024 * 1024
+
+def r2_client():
+    if not all([R2_ENDPOINT,R2_ACCESS_KEY_ID,R2_BUCKET,R2_SECRET_ACCESS_KEY]):
+        raise RuntimeError("R2 configuration missing. Set R2_* environment variables.")
+    return boto3.client(
+        's3',
+        endpoint_url=R2_ENDPOINT,
+        aws_access_key_id=R2_ACCESS_KEY_ID,
+        aws_secret_access_key=R2_SECRET_ACCESS_KEY,
+        region_name="auto",
+        config=Config(s3={"addressing_style": "virtual"})
+    )
+    
+def r2_put_fileobj(key:str,fileobj):
+    s3=r2_client()
+    fileobj.seek(0)
+    s3.put_object(Bucket=R2_BUCKET,key=key,body=fileobj)
+    
+def r2_generate_presigned_get(key:str, expires:3600):
+    if R2_PUBLIC_DOMAIN:
+        return f"{R2_PUBLIC_DOMAIN.rstrip("/")}/{key}"
+    s3=r2_client()
+    return s3.generate_presigned_url(
+        "get_object",
+        Params={"Bucket":R2_BUCKET,"key":key},
+        ExpiresIn=expires
+    )
+    
+def r2_delete_prefix(prefix:str):
+    s3=r2_client()
+    paginator=s3.get_paginator("list_objects_v2")
+    to_delete=[]
+    for page in paginator.paginate(Bucket=R2_BUCKET,prefix=prefix):
+        for obj in page.get("contents",[]):
+            to_delete.append({'key':obj['key']})
+            if len(to_delete)==1000:
+                s3.delete_objects(Bucket=R2_BUCKET,Delete={"Objects":to_delete})
+                to_delete=[]
+    if to_delete:
+                s3.delete_objects(Bucket=R2_BUCKET,Delete={"Objects":to_delete})
+                
+def r2_total_bytes():
+    s3=r2_client()
+    paginator=s3.get_paginator('list_objects_v2')
+    total=0
+    for page in paginator.paginate(Bucket=R2_BUCKET):
+        for obj in page.get('Contents',[]):
+            total+=obj.get('Size',0)
+    return total 
+
+def within_capacity(adding_bytes: int = 0):
+    try:
+        return (r2_total_bytes() + max(0, int(adding_bytes))) < STORAGE_THRESHOLD_BYTES
+    except Exception:
+        return False
+ 
 class User(db.Model):
     id=db.Column(db.Integer,primary_key=True)
     name=db.Column(db.String(250),nullable=False)
@@ -30,7 +98,15 @@ class Room(db.Model):
     name=db.Column(db.String(250),unique=True,nullable=False)
     host_id=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=False)
     room_type = db.Column(db.String(20), nullable=False)
-    
+  
+class RoomQueue(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(250), unique=True, nullable=False)
+    host_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    room_type = db.Column(db.String(20), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    status = db.Column(db.String(20), default='queued') 
+      
 class loginform(FlaskForm):
     email=StringField('Email', validators=[DataRequired(),Email()])
     password=PasswordField('Password', validators=[DataRequired(), length(min=2, max=32)])
@@ -65,6 +141,14 @@ def encrypt_username(username):
 
 def decrypt_username(encoded):
     return urlsafe_b64decode(encoded.encode()).decode()
+
+def release_queue():
+    queued=RoomQueue.query.filter_by(status='queued').order_by(RoomQueue.created_at.asc()).all()
+    if not queued:
+        return
+    if within_capacity(0):
+        queued[0].status='released'
+        db.session.commit()
 
 @app.route('/')
 def index():
@@ -120,16 +204,35 @@ def create_room():
     music_zip=request.files.get('music_zip')
     user=User.query.get(session['user_id'])
     existing=Room.query.filter_by(name=room).first()
-    if existing:
+    existing_q=RoomQueue.query.filter_by(name=room).first()
+    if existing or existing_q:
         flash("Room already exist. Choose another","error")
         return redirect(url_for("home"))
+    
+    incoming_bytes=0
+    try:
+        stream = (video.stream if (video and video.filename) else music_zip.stream if (music_zip and music_zip.filename) else None)
+        if stream:
+            pos = stream.tell()
+            stream.seek(0, os.SEEK_END)
+            incoming_bytes = stream.tell()
+            stream.seek(pos, os.SEEK_SET)
+    except Exception:
+        incoming_bytes = 0
+        
+    if not within_capacity(incoming_bytes):
+        flash("Storage almost full (≥ 9GB). Your room request is queued until space frees up.", "error")
+        rq = RoomQueue(name=room, host_id=user.id, room_type='video' if (video and video.filename) else 'music')
+        db.session.add(rq)
+        db.session.commit()
+        return redirect(url_for("home"))
+    
     if video and video.filename!="":
         new_room = Room(name=room, host_id=user.id,room_type='video')
         db.session.add(new_room)
         db.session.commit()
-        filename=secure_filename(f"{room}.mp4")
-        video_path=os.path.join(app.config['UPLOAD_FOLDER'],filename)
-        video.save(video_path)
+        key = f"rooms/{room}/video.mp4"
+        r2_put_fileobj(key, video.stream)
         encrypted_username=encrypt_username(user.name)
         return redirect(url_for('room',room=room,encrypted_username=encrypted_username))
     
@@ -137,22 +240,21 @@ def create_room():
         new_room = Room(name=room, host_id=user.id,room_type='music')
         db.session.add(new_room)
         db.session.commit()
-        music_folder=os.path.join(app.config['UPLOAD_FOLDER'],room)
-        os.makedirs(music_folder,exist_ok=True)
-        temp_zip_path=os.path.join(app.config['UPLOAD_FOLDER'],secure_filename(music_zip.filename))
-        music_zip.save(temp_zip_path)
-        
-        with zipfile.ZipFile(temp_zip_path,'r') as zip_ref:
-            zip_ref.extractall(music_folder)
-        os.remove(temp_zip_path)
-            
-        saved_files=[]
-        for root,dirs,files in os.walk(music_folder):
-            for file in files:
-                if file.lower().endswith(('.mp3', '.wav', '.ogg', '.flac')):
-                    rel_dir=os.path.relpath(root,music_folder)
-                    rel_file=os.path.join(rel_dir,file) if rel_dir!='.' else file
-                    saved_files.append(rel_file)
+        buf = io.BytesIO(music_zip.read())
+        with zipfile.ZipFile(buf, 'r') as zip_ref:
+            saved_files = []
+            for member in zip_ref.infolist():
+                if member.is_dir():
+                    continue
+                lower = member.filename.lower()
+                if lower.endswith(('.mp3', '.wav', '.ogg', '.flac')):
+                    with zip_ref.open(member) as fsrc:
+                        data = io.BytesIO(fsrc.read())
+                        data.seek(0)
+                        safe_rel = secure_filename(member.filename).replace('\\', '/')
+                        key = f"rooms/{room}/tracks/{safe_rel}"
+                        r2_put_fileobj(key, data)
+                        saved_files.append(safe_rel)
             
         session['music_files_'+room]=saved_files
         encrypted_username=encrypt_username(user.name)
@@ -174,15 +276,24 @@ def join_room_by_link(room):
     if room_obj.room_type=='video':
         return redirect(url_for('room', room=room, encrypted_username=encrypted_username))
     elif room_obj.room_type == 'music':
-        music_path=os.path.join(app.config['UPLOAD_FOLDER'],room)
-        files = []
-        if os.path.isdir(music_path):
-            for root, dirs, filenames in os.walk(music_path):
-                for f in filenames:
-                    if f.lower().endswith(('.mp3', '.wav', '.ogg', '.flac')):
-                        files.append(os.path.relpath(os.path.join(root, f), music_path))
+        files=session.get("music_files_"+room)
+        if not files:
+            try:
+                s3=r2_client()
+                paginator=s3.get_paginator('list_objects_v2')
+                found=[]
+                prefix=f"rooms/{room}/tracks/"
+                for page in paginator.paginate(Bucket=R2_BUCKET,prefix=prefix):
+                    for obj in page.get('Contents',[]):
+                        rel=obj['key'][len(prefix):]
+                        if rel.lower().endswith(('.mp3', '.wav', '.ogg', '.flac')):
+                            found.apped(rel)
+                if found:
+                    session['music_files_'+room]=found 
+                files=found
+            except Exception:
+                files=None
         if files:
-            session['music_files_'+room]=files
             return redirect(url_for('music_room', room=room, encrypted_username=encrypted_username))
         else:
             flash("No music files found in this room", "error")
@@ -206,7 +317,13 @@ def room(room,encrypted_username):
         flash("Room does not exist",'error')
         return redirect(url_for("home"))
     is_host=room_obj.host_id==user.id
-    return render_template('room.html',room=room,username=actual_username,is_host=is_host)
+    video_key=f"rooms/{room}/video.mp4"
+    try:
+        video_url = r2_generate_presigned_get(video_key, expires=60 * 60)
+    except ClientError:
+        flash("Video not available.", "error")
+        return redirect(url_for("home"))
+    return render_template('room.html',room=room,username=actual_username,is_host=is_host,video_url=video_url)
 
 @app.route('/music_room/<room>/<encrypted_username>')
 @login_required
@@ -227,7 +344,15 @@ def music_room(room,encrypted_username):
     if not music_files:
         flash("No music files found in this room","error")
         return redirect(url_for("home"))
-    return render_template('music.html',room=room,username=actual_username,is_host=is_host,music_files=music_files)
+    presigned_tracks = []
+    for relpath in music_files:
+        key = f"rooms/{room}/tracks/{relpath}"
+        try:
+            url = r2_generate_presigned_get(key, expires=60 * 60)
+            presigned_tracks.append({"name": relpath, "url": url})
+        except ClientError:
+            continue
+    return render_template('music.html',room=room,username=actual_username,is_host=is_host,music_files=presigned_tracks)
 
 @app.route('/static/uploads/<filename>')
 @login_required
@@ -267,8 +392,13 @@ def handle_leave_room(data):
         del room_users[room]
         room_obj=Room.query.filter_by(name=room).first()
         if room_obj:
+            try:
+                r2_delete_prefix(f"rooms/{room}/")
+            except Exception as e:
+                print("R2 delete error:",e)
             db.session.delete(room_obj)
             db.session.commit() 
+            release_queue()
         
 @socketio.on('send_sync')
 def handle_send_sync(data):
@@ -332,6 +462,38 @@ def handle_chat_message(data):
     message = data['message']
     emit('chat_message', {'username': username, 'message': message}, room=room)
 
+# =========================
+# ADMIN (optional)
+# =========================
+@app.route('/admin/storage')
+@login_required
+def admin_storage():
+    try:
+        bytes_used = r2_total_bytes()
+    except Exception:
+        bytes_used = -1
+    if bytes_used < 0:
+        return "Unable to fetch R2 usage"
+    mb = bytes_used / 1024 / 1024
+    gb = mb / 1024
+    if gb >= 1:
+        return f"R2 used: {gb:.2f} GB"
+    return f"R2 used: {mb:.2f} MB"
+
+@app.route('/admin/queue')
+@login_required
+def admin_queue():
+    q = RoomQueue.query.order_by(RoomQueue.created_at.asc()).all()
+    return render_template("admin_queue.html", queue=q) 
+
+@app.route('/admin/release-queue', methods=['POST'])
+@login_required
+def admin_release_queue():
+    if release_queue():
+        flash("One queued room has been released.", "success")
+    else:
+        flash("No queued rooms released (either none in queue or capacity full).", "warning")
+    return redirect(url_for('home'))
 
 if __name__=='__main__':
     port=int(os.environ.get('PORT',5000))

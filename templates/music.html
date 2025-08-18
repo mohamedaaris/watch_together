@@ -325,8 +325,8 @@
             <ul id="playlist" class="playlist">
                 {% for track in music_files %}
                 <li data-index="{{loop.index0}}"
-                    data-src="{{url_for('uploaded_music_files',room=room,filename=track)}}">
-                    {{ track }}
+                    data-src="{{ track.url }}">
+                    {{ track.name }}
                 </li>
                 {% endfor %}
             </ul>
