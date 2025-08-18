@@ -1,7 +1,7 @@
 from flask import Flask,render_template,redirect,request,flash,url_for,session,send_from_directory
 from flask_wtf import FlaskForm
 from wtforms import IntegerField, SubmitField, StringField, PasswordField
-from wtforms.validators import length, DataRequired, Email
+from wtforms.validators import Length, DataRequired, Email
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import check_password_hash,generate_password_hash
 from werkzeug.utils import secure_filename
@@ -47,15 +47,15 @@ def r2_client():
 def r2_put_fileobj(key:str,fileobj):
     s3=r2_client()
     fileobj.seek(0)
-    s3.put_object(Bucket=R2_BUCKET,key=key,body=fileobj)
+    s3.put_object(Bucket=R2_BUCKET,Key=key,Body=fileobj)
     
-def r2_generate_presigned_get(key:str, expires:3600):
+def r2_generate_presigned_get(key:str, expires: int=3600):
     if R2_PUBLIC_DOMAIN:
         return f"{R2_PUBLIC_DOMAIN.rstrip('/')}/{key}"
     s3=r2_client()
     return s3.generate_presigned_url(
         "get_object",
-        Params={"Bucket":R2_BUCKET,"key":key},
+        Params={"Bucket":R2_BUCKET,"Key":key},
         ExpiresIn=expires
     )
     
@@ -64,8 +64,8 @@ def r2_delete_prefix(prefix:str):
     paginator=s3.get_paginator("list_objects_v2")
     to_delete=[]
     for page in paginator.paginate(Bucket=R2_BUCKET,prefix=prefix):
-        for obj in page.get("contents",[]):
-            to_delete.append({'key':obj['key']})
+        for obj in page.get("Contents",[]):
+            to_delete.append({'Key':obj['Key']})
             if len(to_delete)==1000:
                 s3.delete_objects(Bucket=R2_BUCKET,Delete={"Objects":to_delete})
                 to_delete=[]
@@ -109,13 +109,13 @@ class RoomQueue(db.Model):
       
 class loginform(FlaskForm):
     email=StringField('Email', validators=[DataRequired(),Email()])
-    password=PasswordField('Password', validators=[DataRequired(), length(min=2, max=32)])
+    password=PasswordField('Password', validators=[DataRequired(), Length(min=6, max=32)])
     submit=SubmitField('login')
 
 class signupform(FlaskForm):
-        name=StringField('Name', validators=[DataRequired(),length(min=2, max=32)])
+        name=StringField('Name', validators=[DataRequired(),Length(min=6, max=32)])
         email=StringField('Email', validators=[DataRequired(),Email()])
-        password=PasswordField('Password', validators=[DataRequired(), length(min=2, max=32)])
+        password=PasswordField('Password', validators=[DataRequired(), Length(min=6, max=32)])
         submit=SubmitField('Signup')
     
 def login_required(f):
@@ -145,10 +145,15 @@ def decrypt_username(encoded):
 def release_queue():
     queued=RoomQueue.query.filter_by(status='queued').order_by(RoomQueue.created_at.asc()).all()
     if not queued:
-        return
+        return False
     if within_capacity(0):
-        queued[0].status='released'
+        rq = queued[0]
+        new_room = Room(name=rq.name, host_id=rq.host_id, room_type=rq.room_type)
+        db.session.add(new_room)
+        db.session.delete(rq)
         db.session.commit()
+        return True
+    return False
 
 @app.route('/')
 def index():
@@ -210,15 +215,16 @@ def create_room():
         return redirect(url_for("home"))
     
     incoming_bytes=0
-    try:
-        stream = (video.stream if (video and video.filename) else music_zip.stream if (music_zip and music_zip.filename) else None)
-        if stream:
-            pos = stream.tell()
-            stream.seek(0, os.SEEK_END)
-            incoming_bytes = stream.tell()
-            stream.seek(pos, os.SEEK_SET)
-    except Exception:
-        incoming_bytes = 0
+    upload_file = video if (video and video.filename) else music_zip if (music_zip and music_zip.filename) else None
+    if upload_file:
+        if request.content_length:
+            incoming_bytes = request.content_length
+        elif hasattr(upload_file, "content_length") and upload_file.content_length:
+            incoming_bytes = upload_file.content_length
+        else:
+            upload_file.stream.seek(0, os.SEEK_END)
+            incoming_bytes = upload_file.stream.tell()
+            upload_file.stream.seek(0)
         
     if not within_capacity(incoming_bytes):
         flash("Storage almost full (≥ 9GB). Your room request is queued until space frees up.", "error")
@@ -283,11 +289,11 @@ def join_room_by_link(room):
                 paginator=s3.get_paginator('list_objects_v2')
                 found=[]
                 prefix=f"rooms/{room}/tracks/"
-                for page in paginator.paginate(Bucket=R2_BUCKET,prefix=prefix):
+                for page in paginator.paginate(Bucket=R2_BUCKET,Prefix=prefix):
                     for obj in page.get('Contents',[]):
-                        rel=obj['key'][len(prefix):]
+                        rel=obj['Key'][len(prefix):]
                         if rel.lower().endswith(('.mp3', '.wav', '.ogg', '.flac')):
-                            found.apped(rel)
+                            found.append(rel)
                 if found:
                     session['music_files_'+room]=found 
                 files=found
