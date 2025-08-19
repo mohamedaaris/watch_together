@@ -338,8 +338,8 @@
             const progressbar = document.getElementById('fileProgress');
             const statustext = document.getElementById('fileStatus');
             const uploadBtn = document.getElementById('uploadBtn');
-            progressbar.value=0;
-            progressbar.style.display="none";
+            progressbar.value = 0;
+            progressbar.style.display = "none";
             uploadBtn.disabled = true;
             try {
                 for (const file of files) {
@@ -351,7 +351,7 @@
                         xhr.open("PUT", upload_url, true);
                         xhr.upload.onprogress = (e) => {
                             if (e.lengthComputable) {
-                                progressbar.style.display="block";
+                                progressbar.style.display = "block";
                                 const percent = (e.loaded / e.total) * 100;
                                 progressbar.value = percent;
                                 statustext.innerText = `Uploading ${file.name}: ${percent.toFixed(2)}%`;
@@ -359,15 +359,18 @@
                         };
                         xhr.onload = () => {
                             if (xhr.status == 200) {
-                                statustext.innerText = `✅ ${file.name} uploaded successfully`<br>;
+                                statustext.innerText = `✅ ${file.name} uploaded successfully<br>`;
                                 resolve();
                             }
                             else {
-                                statustext.innerText = `❌ ${file.name} upload failed`;
+                                statustext.innerText = `❌ ${file.name} upload failed (status ${xhr.status})`;
                                 reject();
                             }
                         };
-                        xhr.onerror = () => reject();
+                        xhr.onerror = () => {
+                            statustext.innerText = `❌ ${file.name} upload failed (network error)`;
+                            reject();
+                        };
                         xhr.send(file);
                     });
                 }
