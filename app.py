@@ -142,6 +142,11 @@ def encrypt_username(username):
 def decrypt_username(encoded):
     return urlsafe_b64decode(encoded.encode()).decode()
 
+@app.route("/encrypt-username/<username>")
+@login_required
+def encrypt_username_api(username):
+    return jsonify({"encrypted": encrypt_username(username)})
+
 def release_queue():
     queued=RoomQueue.query.filter_by(status='queued').order_by(RoomQueue.created_at.asc()).all()
     if not queued:

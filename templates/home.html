@@ -377,7 +377,9 @@
                     });
                 }
                 statustext.innerText += "\nAll files uploaded!";
-                window.location.href = `/room/${room}?username=${encodeURIComponent(username)}`;
+                const res = await fetch(`/encrypt-username/${encodeURIComponent(username)}`);
+                const { encrypted } = await res.json();
+                window.location.href = `/room/${room}/${encrypted}`;
             } catch (err) {
                 console.error(err);
                 statustext.innerText = "❌ Error uploading files!";
@@ -386,7 +388,6 @@
             }
         }
     </script>
-    </div>
 </body>
 
 </html>
