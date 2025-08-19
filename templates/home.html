@@ -244,7 +244,7 @@
             <div class="form-container">
                 <div class="form-box">
                     <h2>create a watch room</h2>
-                    <form action="{{url_for('create_room')}}" method="POST" enctype="multipart/form-data">
+                    <form id="create-room-form" action="{{url_for('create_room')}}" method="POST" enctype="multipart/form-data">
                         <input type="text" name="username" style="font-family:'Orbitron', sans-serif;"
                             placeholder="Enter your name" required>
                         <input type="text" name="room" style="font-family:'Orbitron', sans-serif;"
@@ -255,7 +255,7 @@
                         <label>Or upload a zip file containing music files</label>
                         <input type="file" name="music_zip" id="musicInput" style="font-family:'Orbitron', sans-serif;"
                             accept=".zip">
-                        <button type="button" class="upload-btn" onclick="uploadFiles()">Upload Media</button>
+                        <button type="button" id="uploadBtn" class="upload-btn" onclick="uploadFiles()">Upload Media</button>
                         <progress id="fileProgress" value="0" max="100" style="width:100%; margin-top:5px;"></progress>
                         <p id="fileStatus"></p>
                     </form>
@@ -307,7 +307,7 @@
             }
             const progressbar = document.getElementById('fileProgress');
             const statustext = document.getElementById('fileStatus');
-            const uploadBtn=document.getElementById('.upload-btn');
+            const uploadBtn=document.getElementById('uploadBtn');
             uploadBtn.disabled = true;
             try {
                 for (const file of files) {
