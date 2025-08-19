@@ -83,7 +83,8 @@
             background: #111;
         }
 
-        .upload-btn {
+        .upload-btn,
+        input[type="submit"] {
             width: 90%;
             padding: 12px;
             margin-top: 10px;
@@ -99,7 +100,8 @@
             transition: all 0.3s ease;
         }
 
-        .upload-btn:hover {
+        .upload-btn,
+        input[type="submit"]:hover {
             background-color: #00e0e0;
             transform: scale(1.03);
             box-shadow: 0 0 20px #00ffff;
@@ -165,6 +167,30 @@
             margin-top: 20px;
         }
 
+        #fileProgress {
+            width: 100%;
+            height: 15px;
+            appearance: none;
+            border-radius: 8px;
+            background: #333;
+        }
+
+        #fileProgress::-webkit-progress-bar {
+            background: #333;
+            border-radius: 8px;
+        }
+
+        #fileProgress::-webkit-progress-value {
+            background: #00faff;
+            border-radius: 8px;
+        }
+
+        #fileProgress::-moz-progress-bar {
+            background: #00faff;
+            border-radius: 8px;
+        }
+
+
         /* Tablet screens (600px - 1024px) */
         @media (min-width: 601px) and (max-width: 1024px) {
             .navbar h1 {
@@ -191,6 +217,7 @@
 
             input[type="text"],
             input[type="file"],
+            input[type="submit"],
             .upload-btn {
                 width: 95%;
             }
@@ -208,7 +235,8 @@
 
             input[type="text"],
             input[type="file"],
-            input[type="submit"] {
+            input[type="submit"],
+            .upload-btn {
                 width: 90%;
             }
 
@@ -244,7 +272,8 @@
             <div class="form-container">
                 <div class="form-box">
                     <h2>create a watch room</h2>
-                    <form id="create-room-form" action="{{url_for('create_room')}}" method="POST" enctype="multipart/form-data">
+                    <form id="create-room-form" action="{{url_for('create_room')}}" method="POST"
+                        enctype="multipart/form-data">
                         <input type="text" name="username" style="font-family:'Orbitron', sans-serif;"
                             placeholder="Enter your name" required>
                         <input type="text" name="room" style="font-family:'Orbitron', sans-serif;"
@@ -255,7 +284,8 @@
                         <label>Or upload a zip file containing music files</label>
                         <input type="file" name="music_zip" id="musicInput" style="font-family:'Orbitron', sans-serif;"
                             accept=".zip">
-                        <button type="button" id="uploadBtn" class="upload-btn" onclick="uploadFiles()">Upload Media</button>
+                        <button type="button" id="uploadBtn" class="upload-btn" onclick="uploadFiles()">Upload
+                            Media</button>
                         <progress id="fileProgress" value="0" max="100" style="width:100%; margin-top:5px;"></progress>
                         <p id="fileStatus"></p>
                     </form>
@@ -307,7 +337,9 @@
             }
             const progressbar = document.getElementById('fileProgress');
             const statustext = document.getElementById('fileStatus');
-            const uploadBtn=document.getElementById('uploadBtn');
+            const uploadBtn = document.getElementById('uploadBtn');
+            progressbar.value=0;
+            progressbar.style.display="none";
             uploadBtn.disabled = true;
             try {
                 for (const file of files) {
@@ -319,6 +351,7 @@
                         xhr.open("PUT", upload_url, true);
                         xhr.upload.onprogress = (e) => {
                             if (e.lengthComputable) {
+                                progressbar.style.display="block";
                                 const percent = (e.loaded / e.total) * 100;
                                 progressbar.value = percent;
                                 statustext.innerText = `Uploading ${file.name}: ${percent.toFixed(2)}%`;
@@ -326,7 +359,7 @@
                         };
                         xhr.onload = () => {
                             if (xhr.status == 200) {
-                                statustext.innerText = `✅ ${file.name} uploaded successfully`;
+                                statustext.innerText = `✅ ${file.name} uploaded successfully`<br>;
                                 resolve();
                             }
                             else {
