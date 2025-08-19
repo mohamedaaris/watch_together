@@ -1,4 +1,4 @@
-from flask import Flask,render_template,redirect,request,flash,url_for,session,send_from_directory
+from flask import Flask,render_template,redirect,request,flash,url_for,session,send_from_directory,jsonify
 from flask_wtf import FlaskForm
 from wtforms import IntegerField, SubmitField, StringField, PasswordField
 from wtforms.validators import Length, DataRequired, Email
@@ -154,6 +154,16 @@ def release_queue():
         db.session.commit()
         return True
     return False
+
+@app.route("/upload-url/<filename>")
+def get_upload_url(filename):
+    s3=r2_client()
+    url=s3.generate_presigned_url(
+        "put_object",
+        Params={"BUCKET":R2_BUCKET,"Key":filename},
+        ExpiresIn=3600,
+    )
+    return jsonify({"upload_url":url})
 
 @app.route('/')
 def index():

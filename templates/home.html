@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
+
+<head>
     <meta charset="UTF-8">
     <title>My Website</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -82,7 +83,7 @@
             background: #111;
         }
 
-        input[type="submit"] {
+        .upload-btn {
             width: 90%;
             padding: 12px;
             margin-top: 10px;
@@ -98,16 +99,24 @@
             transition: all 0.3s ease;
         }
 
-        input[type="submit"]:hover {
+        .upload-btn:hover {
             background-color: #00e0e0;
             transform: scale(1.03);
             box-shadow: 0 0 20px #00ffff;
         }
 
         @keyframes pulse {
-            0% { box-shadow: 0 0 10px #00ffff; }
-            50% { box-shadow: 0 0 20px #00ffffaa; }
-            100% { box-shadow: 0 0 10px #00ffff; }
+            0% {
+                box-shadow: 0 0 10px #00ffff;
+            }
+
+            50% {
+                box-shadow: 0 0 20px #00ffffaa;
+            }
+
+            100% {
+                box-shadow: 0 0 10px #00ffff;
+            }
         }
 
         .buttons {
@@ -157,60 +166,60 @@
         }
 
         /* Tablet screens (600px - 1024px) */
-@media (min-width: 601px) and (max-width: 1024px) {
-    .navbar h1 {
-        font-size: 26px;
-    }
+        @media (min-width: 601px) and (max-width: 1024px) {
+            .navbar h1 {
+                font-size: 26px;
+            }
 
-    .navbar .buttons a {
-        padding: 9px;
-        font-size: 15px;
-    }
+            .navbar .buttons a {
+                padding: 9px;
+                font-size: 15px;
+            }
 
-    .form-box {
-        width: 90%;
-        padding: 22px;
-    }
+            .form-box {
+                width: 90%;
+                padding: 22px;
+            }
 
-    .form-container {
-        width: 100%;
-    }
+            .form-container {
+                width: 100%;
+            }
 
-    .slider-container {
-        width: 200%;
-    }
+            .slider-container {
+                width: 200%;
+            }
 
-    input[type="text"],
-    input[type="file"],
-    input[type="submit"] {
-        width: 95%;
-    }
-}
+            input[type="text"],
+            input[type="file"],
+            .upload-btn {
+                width: 95%;
+            }
+        }
 
-/* Desktop large screens (1025px and up) */
-@media (min-width: 1025px) {
-    .form-box {
-        width: 500px;
-    }
+        /* Desktop large screens (1025px and up) */
+        @media (min-width: 1025px) {
+            .form-box {
+                width: 500px;
+            }
 
-    .container {
-        font-size: 22px;
-    }
+            .container {
+                font-size: 22px;
+            }
 
-    input[type="text"],
-    input[type="file"],
-    input[type="submit"] {
-        width: 90%;
-    }
+            input[type="text"],
+            input[type="file"],
+            input[type="submit"] {
+                width: 90%;
+            }
 
-    .slider-wrapper {
-        max-width: 1000px;
-        margin: auto;
-    }
-}
-
+            .slider-wrapper {
+                max-width: 1000px;
+                margin: auto;
+            }
+        }
     </style>
 </head>
+
 <body>
     <div class="navbar">
         <h1>My App</h1>
@@ -225,9 +234,9 @@
     <div class="container">
         <p>Welcome to the home page</p>
         {% with messages=get_flashed_messages(with_categories=True) %}
-            {% for category,message in messages %}
-                <p class="{{category}}">{{ message }}</p>
-            {% endfor %}
+        {% for category,message in messages %}
+        <p class="{{category}}">{{ message }}</p>
+        {% endfor %}
         {% endwith %}
     </div>
     <div class="slider-wrapper">
@@ -236,45 +245,110 @@
                 <div class="form-box">
                     <h2>create a watch room</h2>
                     <form action="{{url_for('create_room')}}" method="POST" enctype="multipart/form-data">
-                        <input type="text" name="username" style="font-family:'Orbitron', sans-serif;" placeholder="Enter your name" required>
-                        <input type="text" name="room" style="font-family:'Orbitron', sans-serif;" placeholder="Enter room name" required>
+                        <input type="text" name="username" style="font-family:'Orbitron', sans-serif;"
+                            placeholder="Enter your name" required>
+                        <input type="text" name="room" style="font-family:'Orbitron', sans-serif;"
+                            placeholder="Enter room name" required>
                         <label>Upload a video</label>
-                        <input type="file" name="video" style="font-family:'Orbitron', sans-serif;" accept="video/mp4">
+                        <input type="file" name="video" id="videoInput" style="font-family:'Orbitron', sans-serif;"
+                            accept="video/mp4">
                         <label>Or upload a zip file containing music files</label>
-                        <input type="file" name="music_zip" style="font-family:'Orbitron', sans-serif;" accept=".zip" >
-                        <input type="submit" style="font-family:'Orbitron', sans-serif;" value="Create room & upload media">
-                    </form> 
-                    <button class="toggle-btn" style="font-family:'Orbitron', sans-serif;" onclick="slide_to_join()">Want to join a existing room?</button>
+                        <input type="file" name="music_zip" id="musicInput" style="font-family:'Orbitron', sans-serif;"
+                            accept=".zip">
+                        <button type="button" class="upload-btn" onclick="uploadFiles()">Upload Media</button>
+                        <progress id="fileProgress" value="0" max="100" style="width:100%; margin-top:5px;"></progress>
+                        <p id="fileStatus"></p>
+                    </form>
+                    <button class="toggle-btn" style="font-family:'Orbitron', sans-serif;"
+                        onclick="slide_to_join()">Want to join a existing room?</button>
                 </div>
             </div>
             <div class="form-container">
                 <div class="form-box">
                     <h2>Join a existing room</h2>
                     <form id="join-room-form">
-                        <input type="text" style="font-family:'Orbitron', sans-serif;" id="room" placeholder="Enter room name" required>
-                        <input type="text" style="font-family:'Orbitron', sans-serif;" id="username" placeholder="Enter your name" required>
+                        <input type="text" style="font-family:'Orbitron', sans-serif;" id="room"
+                            placeholder="Enter room name" required>
+                        <input type="text" style="font-family:'Orbitron', sans-serif;" id="username"
+                            placeholder="Enter your name" required>
                         <input type="submit" style="font-family:'Orbitron', sans-serif;" value="join room">
                     </form>
-                    <button class="toggle-btn" style="font-family:'Orbitron', sans-serif;" onclick="slide_to_create()">Back to create room</button>
+                    <button class="toggle-btn" style="font-family:'Orbitron', sans-serif;"
+                        onclick="slide_to_create()">Back to create room</button>
                 </div>
             </div>
         </div>
     </div>
-        <script>
-            const slider=document.getElementById('slider');
-            function slide_to_create(){
-                slider.style.transform='translateX(0)';
+    <script>
+        const slider = document.getElementById('slider');
+        function slide_to_create() {
+            slider.style.transform = 'translateX(0)';
+        }
+        function slide_to_join() {
+            slider.style.transform = 'translateX(-50%)';
+        }
+        document.getElementById('join-room-form').addEventListener("submit", function (e) {
+            e.preventDefault();
+            const room = document.getElementById('room').value;
+            const username = document.getElementById('username').value;
+            window.location.href = `/join/${room}`;
+        });
+
+        async function uploadFiles() {
+            const videofile = document.getElementById('videoInput').files[0];
+            const musicfile = document.getElementById('musicInput').files[0];
+            const files = [];
+            if (videofile) files.push(videofile);
+            if (musicfile) files.push(musicfile);
+
+            if (files.length == 0) {
+                alert("Please select at least one file");
+                return;
             }
-            function slide_to_join(){
-                slider.style.transform='translateX(-50%)';
+            const progressbar = document.getElementById('fileProgress');
+            const statustext = document.getElementById('fileStatus');
+            const uploadBtn=document.getElementById('.upload-btn');
+            uploadBtn.disabled = true;
+            try {
+                for (const file of files) {
+                    statustext.innerText = `Uploading ${file.name}...`;
+                    const res = await fetch(`/upload-url/${encodeURIComponent(file.name)}`);
+                    const { upload_url } = await res.json();
+                    await new Promise((resolve, reject) => {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open("PUT", upload_url, true);
+                        xhr.upload.onprogress = (e) => {
+                            if (e.lengthComputable) {
+                                const percent = (e.loaded / e.total) * 100;
+                                progressbar.value = percent;
+                                statustext.innerText = `Uploading ${file.name}: ${percent.toFixed(2)}%`;
+                            }
+                        };
+                        xhr.onload = () => {
+                            if (xhr.status == 200) {
+                                statustext.innerText = `✅ ${file.name} uploaded successfully`;
+                                resolve();
+                            }
+                            else {
+                                statustext.innerText = `❌ ${file.name} upload failed`;
+                                reject();
+                            }
+                        };
+                        xhr.onerror = () => reject();
+                        xhr.send(file);
+                    });
+                }
+                statustext.innerText += "\nAll files uploaded!";
+                document.getElementById('create-room-form').submit();
+            } catch (err) {
+                console.error(err);
+                statustext.innerText = "❌ Error uploading files!";
+            } finally {
+                uploadBtn.disabled = false;
             }
-            document.getElementById('join-room-form').addEventListener("submit",function(e){
-                e.preventDefault();
-                const room=document.getElementById('room').value;
-                const username=document.getElementById('username').value;
-                window.location.href=`/join/${room}`;
-            });
-        </script>
+        }
+    </script>
     </div>
-</body>   
-</html> 
+</body>
+
+</html>
