@@ -325,6 +325,8 @@
         });
 
         async function uploadFiles() {
+            const username = document.querySelector("input[name='username']").value;
+            const room = document.querySelector("input[name='room']").value;
             const videofile = document.getElementById('videoInput').files[0];
             const musicfile = document.getElementById('musicInput').files[0];
             const files = [];
@@ -375,7 +377,7 @@
                     });
                 }
                 statustext.innerText += "\nAll files uploaded!";
-                document.getElementById('create-room-form').submit();
+                window.location.href = `/room/${room}?username=${encodeURIComponent(username)}`;
             } catch (err) {
                 console.error(err);
                 statustext.innerText = "❌ Error uploading files!";
