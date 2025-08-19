@@ -160,7 +160,7 @@ def get_upload_url(filename):
     s3=r2_client()
     url=s3.generate_presigned_url(
         "put_object",
-        Params={"BUCKET":R2_BUCKET,"Key":filename},
+        Params={"Bucket":R2_BUCKET,"Key":filename},
         ExpiresIn=3600,
     )
     return jsonify({"upload_url":url})
