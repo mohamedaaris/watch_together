@@ -282,8 +282,10 @@
                         <input type="file" name="video" id="videoInput" style="font-family:'Orbitron', sans-serif;"
                             accept="video/mp4">
                         <label>Or upload a zip file containing music files</label>
-                        <input type="file" name="music_zip" id="musicInput" style="font-family:'Orbitron', sans-serif;" accept=".zip">
-                        <button type="button" id="uploadBtn" class="upload-btn" style="font-family:'Orbitron', sans-serif;" onclick="uploadFiles()">Upload Media</button>
+                        <input type="file" name="music_zip" id="musicInput" style="font-family:'Orbitron', sans-serif;"
+                            accept=".zip">
+                        <button type="button" id="uploadBtn" class="upload-btn"
+                            style="font-family:'Orbitron', sans-serif;" onclick="uploadFiles()">Upload Media</button>
                         <progress id="fileProgress" value="0" max="100" style="width:100%; margin-top:5px;"></progress>
                         <p id="fileStatus"></p>
                     </form>
@@ -319,7 +321,7 @@
             e.preventDefault();
             const room = document.getElementById('room').value;
             const username = document.getElementById('username').value;
-            window.location.href = `/join/${room}`;
+            window.location.href = `/join/${encodeURIComponent(room)}?username=${encodeURIComponent(username)}`;
         });
 
         async function uploadFiles() {
@@ -327,14 +329,11 @@
             const room = document.querySelector("input[name='room']").value;
             const videofile = document.getElementById('videoInput').files[0];
             const musicfile = document.getElementById('musicInput').files[0];
-            const files = [];
-            if (videofile) files.push(videofile);
-            if (musicfile) files.push(musicfile);
-
-            if (files.length == 0) {
-                alert("Please select at least one file");
+            if (!videofile && !musicfile) {
+                alert("Please select atleast one file");
                 return;
             }
+
             const progressbar = document.getElementById('fileProgress');
             const statustext = document.getElementById('fileStatus');
             const uploadBtn = document.getElementById('uploadBtn');
@@ -342,42 +341,51 @@
             progressbar.style.display = "none";
             uploadBtn.disabled = true;
             try {
-                for (const file of files) {
-                    statustext.innerText = `Uploading ${file.name}...`;
-                    const res = await fetch(`/upload-url/${encodeURIComponent(file.name)}`);
-                    const { upload_url } = await res.json();
+                const formData = new FormData();
+                formData.append("username", username);
+                formData.append("room", room);
+                if (videofile) formData.append("video", videofile);
+                if (musicfile) formData.append("music_zip", musicfile);
+                const res = await fetch('/create_room', { method: "POST", body: formData });
+                const data = await res.json();
+
+                if (data.upload_url && videofile) {
                     await new Promise((resolve, reject) => {
                         const xhr = new XMLHttpRequest();
-                        xhr.open("PUT", upload_url, true);
+                        xhr.open("PUT", data.upload_url, true);
                         xhr.upload.onprogress = (e) => {
                             if (e.lengthComputable) {
                                 progressbar.style.display = "block";
                                 const percent = (e.loaded / e.total) * 100;
                                 progressbar.value = percent;
-                                statustext.innerText = `Uploading ${file.name}: ${percent.toFixed(2)}%`;
+                                statustext.innerText = `Uploading video: ${videofile.name}: ${percent.toFixed(2)}%`;
                             }
                         };
                         xhr.onload = () => {
                             if (xhr.status == 200) {
-                                statustext.innerText = `✅ ${file.name} uploaded successfully<br>`;
+                                statustext.innerText = `✅ ${videofile.name} uploaded successfully<br>`;
                                 resolve();
                             }
                             else {
-                                statustext.innerText = `❌ ${file.name} upload failed (status ${xhr.status})`;
+                                statustext.innerText = `❌ ${videofile.name} upload failed (status ${xhr.status})`;
                                 reject();
                             }
                         };
                         xhr.onerror = () => {
-                            statustext.innerText = `❌ ${file.name} upload failed (network error)`;
+                            statustext.innerText = `❌ ${videofile.name} upload failed (network error)`;
                             reject();
                         };
-                        xhr.send(file);
+                        xhr.send(videofile);
                     });
                 }
-                statustext.innerText += "\nAll files uploaded!";
-                const res = await fetch(`/encrypt-username/${encodeURIComponent(username)}`);
-                const { encrypted } = await res.json();
-                window.location.href = `/room/${room}/${encrypted}`;
+                if (data.redirect_url && musicfile) {
+                    statustext.innerText = `✅ Music ZIP uploaded: ${musicfile.name}`;
+                    window.location.href = data.redirect_url;
+                    return;
+                }
+                if(data.room_link){
+                    window.location.href=data.room_link;
+                }
             } catch (err) {
                 console.error(err);
                 statustext.innerText = "❌ Error uploading files!";

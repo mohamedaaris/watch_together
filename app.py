@@ -267,9 +267,8 @@ def create_room():
             ExpiresIn=3600
         )
         encrypted_username=encrypt_username(user.name)
-        return jsonify({"room": room, "upload_url": url, "redirect": url_for('room', room=room, encrypted_username=encrypted_username)})
+        return jsonify({"room": room, "upload_url": url, "room_link": url_for('room', room=room, encrypted_username=encrypted_username)})
     elif room_type == 'music':
-        saved_files = []
         try:
             with zipfile.ZipFile(music_zip.stream) as zip_ref:
                 for member in zip_ref.infolist():
@@ -280,22 +279,41 @@ def create_room():
                         with zip_ref.open(member) as fsrc:
                             key = f"rooms/{room}/tracks/{secure_filename(os.path.basename(member.filename))}"
                             r2_put_fileobj(key, fsrc)
-                            saved_files.append(os.path.basename(member.filename))
         except zipfile.BadZipFile:
             flash("Invalid ZIP file uploaded.","error")
             db.session.delete(new_room)
             db.session.commit()
             return redirect(url_for("home"))
         
-        session['music_files_' + room] = saved_files
+        music_files = []
+        s3 = r2_client()
+        prefix = f"rooms/{room}/tracks/"
+        paginator = s3.get_paginator('list_objects_v2')
+        for page in paginator.paginate(Bucket=R2_BUCKET, Prefix=prefix):
+            for obj in page.get('Contents', []):
+                rel = obj['Key'][len(prefix):]
+                if rel.lower().endswith(('.mp3', '.wav', '.ogg', '.flac')):
+                    music_files.append(rel)
+        
+        if not music_files:
+            flash("No music files found in this room after upload.", "error")
+            db.session.delete(new_room)
+            db.session.commit()
+            return redirect(url_for('home'))
+        session['music_files_'+room]=music_files
         encrypted_username = encrypt_username(user.name)
-        return redirect(url_for('music_room', room=room, encrypted_username=encrypted_username))
+        return jsonify({"redirect_url": url_for('music_room', room=room, encrypted_username=encrypted_username)})
+
 
 @app.route('/join/<room>')
 @login_required
 def join_room_by_link(room):
-    user=User.query.get(session['user_id'])
-    encrypted_username=encrypt_username(user.name)
+    typed_name = request.args.get('username')
+    if typed_name:
+        encrypted_username = encrypt_username(typed_name)
+    else:
+        user = User.query.get(session['user_id'])
+        encrypted_username = encrypt_username(user.name)
     room_obj=Room.query.filter_by(name=room).first()
     if not room_obj:
         flash("Room does not exist", "error")
