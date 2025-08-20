@@ -346,7 +346,12 @@
                 const formData = new FormData();
                 formData.append("username", username);
                 formData.append("room", room);
-                if (musicfile) formData.append("music_zip", musicfile);
+                if (videofile) {
+                    formData.append("room_type", "video");   
+                } else if (musicfile) {
+                    formData.append("room_type", "music");
+                    formData.append("music_zip", musicfile); 
+                }
                 const data = await new Promise((resolve, reject) => {
                     const xhr = new XMLHttpRequest();
                     xhr.open("POST", "/create_room", true);
