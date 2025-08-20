@@ -380,9 +380,11 @@
                     xhr.send(formData);
                 });
                 if (videofile && data.room_link) {
-                    window.location.href = data.room_link;
-                    return;
-                }
+                statustext.innerText = `✅ Video uploaded successfully`;
+                progressbar.style.display = "none";
+                window.location.href = data.room_link;
+                return;
+            }
                 if (data.redirect_url && musicfile) {
                     await new Promise((resolve, reject) => {
                         const xhr = new XMLHttpRequest();
