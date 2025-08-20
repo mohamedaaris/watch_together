@@ -23,7 +23,7 @@ socketio=SocketIO(app,cors_allowed_origins='*',async_mode='eventlet')
 db=SQLAlchemy(app)
 os.makedirs(app.config['UPLOAD_FOLDER'],exist_ok=True)
 room_users={}
-CSRFProtect(app)
+csrf=CSRFProtect(app)
 R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID")
 R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
 R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY")
@@ -224,6 +224,7 @@ def login():
             flash("Invalid email or password! Try again","error")
     return render_template('login.html', form=form)
 
+@csrf.exempt
 @app.route('/create_room', methods=['POST'])
 @login_required
 def create_room():
