@@ -18,6 +18,7 @@ app=Flask(__name__)
 app.secret_key='my_secretkey'
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['UPLOAD_FOLDER']='static/uploads'
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024 
 socketio=SocketIO(app,cors_allowed_origins='*',async_mode='eventlet')
 db=SQLAlchemy(app)
 os.makedirs(app.config['UPLOAD_FOLDER'],exist_ok=True)
@@ -156,16 +157,16 @@ def encrypt_username_api(username):
 
 def release_queue():
     queued=RoomQueue.query.filter_by(status='queued').order_by(RoomQueue.created_at.asc()).all()
-    if not queued:
-        return False
-    if within_capacity(0):
-        rq = queued[0]
+    released_any=False
+    for rq in queued:
+        if not within_capacity(0):
+            break
         new_room = Room(name=rq.name, host_id=rq.host_id, room_type=rq.room_type)
         db.session.add(new_room)
         db.session.delete(rq)
         db.session.commit()
-        return True
-    return False
+        released_any=True
+    return released_any
 
 @app.route("/upload-url/<filename>")
 def get_upload_url(filename):
@@ -235,63 +236,60 @@ def create_room():
     if existing or existing_q:
         flash("Room already exist. Choose another","error")
         return redirect(url_for("home"))
-    
-    incoming_bytes=0
-    upload_file = video if (video and video.filename) else music_zip if (music_zip and music_zip.filename) else None
+    room_type='video' if (video and video.filename) else 'music' if(music_zip and music_zip.filename) else None
+    if not room_type:
+        flash("Please upload a video or a ZIP file with music tracks.", "error")
+        return redirect(url_for("home"))
+    incoming_bytes = 0
+    upload_file = video if room_type == 'video' else music_zip
     if upload_file:
-        if request.content_length:
-            incoming_bytes = request.content_length
-        elif hasattr(upload_file, "content_length") and upload_file.content_length:
+        if hasattr(upload_file, 'content_length') and upload_file.content_length:
             incoming_bytes = upload_file.content_length
         else:
             upload_file.stream.seek(0, os.SEEK_END)
             incoming_bytes = upload_file.stream.tell()
             upload_file.stream.seek(0)
-        
+
     if not within_capacity(incoming_bytes):
         flash("Storage almost full (≥ 9GB). Your room request is queued until space frees up.", "error")
-        rq = RoomQueue(name=room, host_id=user.id, room_type='video' if (video and video.filename) else 'music')
+        rq = RoomQueue(name=room, host_id=user.id, room_type=room_type)
         db.session.add(rq)
         db.session.commit()
         return redirect(url_for("home"))
-    
-    if video and video.filename!="":
-        new_room = Room(name=room, host_id=user.id,room_type='video')
-        db.session.add(new_room)
-        db.session.commit()
-        key = f"rooms/{room}/video.mp4"
-        r2_put_fileobj(key, video.stream)
+    new_room=Room(name=room,host_id=user.id,room_type=room_type)
+    db.session.add(new_room)
+    db.session.commit()
+    if room_type=='video':
+        key=f"rooms/{room}/video.mp4"
+        url=r2_client().generate_presigned_url(
+            'put_object',
+            Params={"Bucket":R2_BUCKET,"Key":key},
+            ExpiresIn=3600
+        )
         encrypted_username=encrypt_username(user.name)
-        return redirect(url_for('room',room=room,encrypted_username=encrypted_username))
-    
-    elif music_zip and music_zip.filename!="":
-        new_room = Room(name=room, host_id=user.id,room_type='music')
-        db.session.add(new_room)
-        db.session.commit()
-        buf = io.BytesIO(music_zip.read())
-        with zipfile.ZipFile(buf, 'r') as zip_ref:
-            saved_files = []
-            for member in zip_ref.infolist():
-                if member.is_dir():
-                    continue
-                lower = member.filename.lower()
-                if lower.endswith(('.mp3', '.wav', '.ogg', '.flac')):
-                    with zip_ref.open(member) as fsrc:
-                        data = io.BytesIO(fsrc.read())
-                        data.seek(0)
-                        filename = os.path.basename(member.filename)
-                        safe_rel = secure_filename(filename)
-                        key = f"rooms/{room}/tracks/{safe_rel}"
-                        r2_put_fileobj(key, data)
-                        saved_files.append(safe_rel)
-            
-        session['music_files_'+room]=saved_files
-        encrypted_username=encrypt_username(user.name)
-        return redirect(url_for('music_room',room=room,encrypted_username=encrypted_username))
-    else:
-        flash("Please upload a video or a ZIP file with music tracks.","error")
-        return redirect(url_for("home"))
-            
+        return jsonify({"room": room, "upload_url": url, "redirect": url_for('room', room=room, encrypted_username=encrypted_username)})
+    elif room_type == 'music':
+        saved_files = []
+        try:
+            with zipfile.ZipFile(music_zip.stream) as zip_ref:
+                for member in zip_ref.infolist():
+                    if member.is_dir():
+                        continue
+                    lower = member.filename.lower()
+                    if lower.endswith(('.mp3', '.wav', '.ogg', '.flac')):
+                        with zip_ref.open(member) as fsrc:
+                            key = f"rooms/{room}/tracks/{secure_filename(os.path.basename(member.filename))}"
+                            r2_put_fileobj(key, fsrc)
+                            saved_files.append(os.path.basename(member.filename))
+        except zipfile.BadZipFile:
+            flash("Invalid ZIP file uploaded.","error")
+            db.session.delete(new_room)
+            db.session.commit()
+            return redirect(url_for("home"))
+        
+        session['music_files_' + room] = saved_files
+        encrypted_username = encrypt_username(user.name)
+        return redirect(url_for('music_room', room=room, encrypted_username=encrypted_username))
 
 @app.route('/join/<room>')
 @login_required
@@ -419,6 +417,11 @@ def handle_leave_room(data):
     emit('chat_message', {'username': 'System', 'message': f'{username} has left the room.'}, room=room)
     if room in room_users and len(room_users[room])==0:
         del room_users[room]
+        
+        session_key='music_files_'+room
+        if session_key in session:
+            session.pop(session_key)
+            
         room_obj=Room.query.filter_by(name=room).first()
         if room_obj:
             try:
@@ -519,7 +522,7 @@ def admin_queue():
 @login_required
 def admin_release_queue():
     if release_queue():
-        flash("One queued room has been released.", "success")
+        flash("queued rooms has been released.", "success")
     else:
         flash("No queued rooms released (either none in queue or capacity full).", "warning")
     return redirect(url_for('home'))
