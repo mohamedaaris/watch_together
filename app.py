@@ -228,31 +228,26 @@ def login():
 @app.route('/create_room', methods=['POST'])
 @login_required
 def create_room():
+    room=request.form['room']
+    video=request.files.get('video')
+    music_zip=request.files.get('music_zip')
     user=User.query.get(session['user_id'])
-    if request.is_json:
-        data = request.get_json()
-        room = data.get('room')
-        room_type = data.get('room_type')
-        username = data.get('username')
-    else:
-        room=request.form['room']
-        room_type = request.form.get('room_type')
-        username = request.form.get('username')
-        music_zip=request.files.get('music_zip')
     existing=Room.query.filter_by(name=room).first()
     existing_q=RoomQueue.query.filter_by(name=room).first()
     if existing or existing_q:
         return jsonify({"error": "Room already exists. Choose another."}), 400
-    if room_type not in ["video", "music"]:
-        return jsonify({"error": "Please specify a valid room type (video or music)."}), 400
+    room_type='video' if (video and video.filename) else 'music' if(music_zip and music_zip.filename) else None
+    if not room_type:
+        return jsonify({"error": "Please upload a video or a ZIP file with music tracks."}), 400
     incoming_bytes = 0
-    if room_type == "music" and music_zip:
-        if hasattr(music_zip, 'content_length') and music_zip.content_length:
-            incoming_bytes = music_zip.content_length
+    upload_file = video if room_type == 'video' else music_zip
+    if upload_file:
+        if hasattr(upload_file, 'content_length') and upload_file.content_length:
+            incoming_bytes = upload_file.content_length
         else:
-            music_zip.stream.seek(0, os.SEEK_END)
-            incoming_bytes = music_zip.stream.tell()
-            music_zip.stream.seek(0)
+            upload_file.stream.seek(0, os.SEEK_END)
+            incoming_bytes = upload_file.stream.tell()
+            upload_file.stream.seek(0)
 
     if not within_capacity(incoming_bytes):
         rq = RoomQueue(name=room, host_id=user.id, room_type=room_type)
