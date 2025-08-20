@@ -346,23 +346,17 @@
                 const formData = new FormData();
                 formData.append("username", username);
                 formData.append("room", room);
-                if (videofile) formData.append("video", videofile);
-                if (musicfile) formData.append("music_zip", musicfile);
+                if (videofile) {
+                    formData.append("room_type", "video");
+                    formData.append("filename", videofile.name); // only metadata
+                }
+                if (musicfile) {
+                    formData.append("room_type", "music");
+                    formData.append("music_zip", musicfile); // still sent as file
+                }
                 const data = await new Promise((resolve, reject) => {
                     const xhr = new XMLHttpRequest();
                     xhr.open("POST", "/create_room", true);
-                    xhr.upload.onprogress = (e) => {
-                        if (e.lengthComputable) {
-                            progressbar.style.display = "block";
-                            const percent = (e.loaded / e.total) * 100;
-                            progressbar.value = percent;
-                            if (musicfile) {
-                                statustext.innerText = `Uploading music: ${musicfile.name} ${percent.toFixed(2)}%`;
-                            } else {
-                                statustext.innerText = `Uploading request... ${percent.toFixed(2)}%`;
-                            }
-                        }
-                    };
                     xhr.onload = () => {
                         if (xhr.status === 200) {
                             resolve(JSON.parse(xhr.responseText));
