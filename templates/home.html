@@ -348,6 +348,11 @@
                 if (musicfile) formData.append("music_zip", musicfile);
                 const res = await fetch('/create_room', { method: "POST", body: formData });
                 const data = await res.json();
+                if (!res.ok) {
+                    statustext.innerText = `❌ ${data.error || 'Error uploading file'}`;
+                    uploadBtn.disabled = false;
+                    return;
+                }
 
                 if (data.upload_url && videofile) {
                     await new Promise((resolve, reject) => {
@@ -383,8 +388,8 @@
                     window.location.href = data.redirect_url;
                     return;
                 }
-                if(data.room_link){
-                    window.location.href=data.room_link;
+                if (data.room_link) {
+                    window.location.href = data.room_link;
                 }
             } catch (err) {
                 console.error(err);

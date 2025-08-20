@@ -234,12 +234,10 @@ def create_room():
     existing=Room.query.filter_by(name=room).first()
     existing_q=RoomQueue.query.filter_by(name=room).first()
     if existing or existing_q:
-        flash("Room already exist. Choose another","error")
-        return redirect(url_for("home"))
+        return jsonify({"error": "Room already exists. Choose another."}), 400
     room_type='video' if (video and video.filename) else 'music' if(music_zip and music_zip.filename) else None
     if not room_type:
-        flash("Please upload a video or a ZIP file with music tracks.", "error")
-        return redirect(url_for("home"))
+        return jsonify({"error": "Please upload a video or a ZIP file with music tracks."}), 400
     incoming_bytes = 0
     upload_file = video if room_type == 'video' else music_zip
     if upload_file:
@@ -251,11 +249,10 @@ def create_room():
             upload_file.stream.seek(0)
 
     if not within_capacity(incoming_bytes):
-        flash("Storage almost full (≥ 9GB). Your room request is queued until space frees up.", "error")
         rq = RoomQueue(name=room, host_id=user.id, room_type=room_type)
         db.session.add(rq)
         db.session.commit()
-        return redirect(url_for("home"))
+        return jsonify({"error": "Storage almost full (≥ 9GB). Your room request is queued until space frees up."}), 400
     new_room=Room(name=room,host_id=user.id,room_type=room_type)
     db.session.add(new_room)
     db.session.commit()
@@ -280,10 +277,9 @@ def create_room():
                             key = f"rooms/{room}/tracks/{secure_filename(os.path.basename(member.filename))}"
                             r2_put_fileobj(key, fsrc)
         except zipfile.BadZipFile:
-            flash("Invalid ZIP file uploaded.","error")
             db.session.delete(new_room)
             db.session.commit()
-            return redirect(url_for("home"))
+            return jsonify({"error": "Invalid ZIP file uploaded."}), 400
         
         music_files = []
         s3 = r2_client()
@@ -296,10 +292,9 @@ def create_room():
                     music_files.append(rel)
         
         if not music_files:
-            flash("No music files found in this room after upload.", "error")
             db.session.delete(new_room)
             db.session.commit()
-            return redirect(url_for('home'))
+            return jsonify({"error": "No music files found in this room after upload."}), 400
         session['music_files_'+room]=music_files
         encrypted_username = encrypt_username(user.name)
         return jsonify({"redirect_url": url_for('music_room', room=room, encrypted_username=encrypted_username)})
