@@ -357,6 +357,9 @@
                             const percent = (e.loaded / e.total) * 100;
                             progressbar.value = percent;
                             statustext.innerText = `Uploading to server: ${percent.toFixed(2)}%`;
+                            if (percent >= 100) {
+                                statustext.innerText = "Processing on server...";
+                            }
                         }
                     };
                     xhr.onload = () => {
@@ -364,46 +367,21 @@
                             resolve(JSON.parse(xhr.responseText));
                         } else {
                             statustext.innerText = "❌ Failed to create room request.";
-                            progressbar.style.display="none";
+                            progressbar.style.display = "none";
                             reject(new Error("Failed to create room"));
                         }
                     };
 
-                    xhr.onerror = () =>{
+                    xhr.onerror = () => {
                         statustext.innerText = "❌ Network error during request.";
-                        progressbar.style.display="none";
+                        progressbar.style.display = "none";
                         reject(new Error("Network error"));
-                    } 
+                    }
                     xhr.send(formData);
                 });
-                if (data.upload_url && videofile) {
-                    await new Promise((resolve, reject) => {
-                        const xhr = new XMLHttpRequest();
-                        xhr.open("PUT", data.upload_url, true);
-                        xhr.upload.onprogress = (e) => {
-                            if (e.lengthComputable) {
-                                progressbar.style.display = "block";
-                                const percent = (e.loaded / e.total) * 100;
-                                progressbar.value = percent;
-                                statustext.innerText = `Uploading video: ${videofile.name} ${percent.toFixed(2)}%`;
-                            }
-                        };
-                        xhr.onload = () => {
-                            if (xhr.status === 200) {
-                                statustext.innerText = `✅ ${videofile.name} uploaded successfully`;
-                                resolve();
-                            } else {
-                                statustext.innerText = `❌ ${videofile.name} upload failed (status ${xhr.status})`;
-                                progressbar.style.display = "none";
-                                reject(new Error("Video upload failed"));
-                            }
-                        };
-                        xhr.onerror = () => {
-                            statustext.innerText = `❌ ${videofile.name} upload failed (network error)`;
-                            reject();
-                        };
-                        xhr.send(videofile);
-                    });
+                if (videofile && data.room_link) {
+                    window.location.href = data.room_link;
+                    return;
                 }
                 if (data.redirect_url && musicfile) {
                     await new Promise((resolve, reject) => {
