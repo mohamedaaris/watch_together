@@ -356,9 +356,10 @@
                             progressbar.style.display = "block";
                             const percent = (e.loaded / e.total) * 100;
                             progressbar.value = percent;
-                            statustext.innerText = `Uploading to server: ${percent.toFixed(2)}%`;
-                            if (percent >= 100) {
-                                statustext.innerText = "Processing on server...";
+                            if (musicfile) {
+                                statustext.innerText = `Uploading music: ${musicfile.name} ${percent.toFixed(2)}%`;
+                            } else {
+                                statustext.innerText = `Uploading request... ${percent.toFixed(2)}%`;
                             }
                         }
                     };
@@ -417,41 +418,10 @@
                     }
                     return;
                 }
-                if (data.redirect_url && musicfile) {
-                    await new Promise((resolve, reject) => {
-                        const xhr = new XMLHttpRequest();
-                        xhr.open("PUT", data.redirect_url, true);
-
-                        xhr.upload.onprogress = (e) => {
-                            if (e.lengthComputable) {
-                                progressbar.style.display = "block";
-                                const percent = (e.loaded / e.total) * 100;
-                                progressbar.value = percent;
-                                statustext.innerText = `Uploading music ZIP: ${musicfile.name} ${percent.toFixed(2)}%`;
-                            }
-                        };
-
-                        xhr.onload = () => {
-                            if (xhr.status === 200) {
-                                statustext.innerText = `✅ ${musicfile.name} uploaded successfully`;
-                                progressbar.style.display = "none";
-                                resolve();
-                            } else {
-                                statustext.innerText = `❌ ${musicfile.name} upload failed (status ${xhr.status})`;
-                                reject();
-                            }
-                        };
-
-                        xhr.onerror = () => {
-                            statustext.innerText = `❌ ${musicfile.name} upload failed (network error)`;
-                            reject();
-                        };
-
-                        xhr.send(musicfile);
-                    });
-                    if (data.room_link) {
-                        window.location.href = data.room_link;
-                    }
+                if (musicfile && data.redirect_url) {
+                    statustext.innerText = `✅ ${musicfile.name} uploaded successfully — processing tracks...`;
+                    progressbar.style.display = "none";
+                    window.location.href = data.redirect_url;
                     return;
                 }
             } catch (err) {
