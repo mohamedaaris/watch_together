@@ -354,7 +354,7 @@
                             room_type: "video"
                         })
                     }).then(res => res.json());
-                    if (videofile && data.upload_url) {
+                    if (data.upload_url) {
                         await new Promise((resolve, reject) => {
                             const xhr = new XMLHttpRequest();
                             xhr.open("PUT", data.upload_url, true);
@@ -393,8 +393,8 @@
                         return;
                     }
                 }
-                if (musicfile && data.redirect_url) {
-                    const formData = new FormData();
+                if (musicfile){
+                    const formData=new FormData();
                     formData.append("username", username);
                     formData.append("room", room);
                     formData.append("room_type", "music");
