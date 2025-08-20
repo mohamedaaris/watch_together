@@ -343,90 +343,99 @@
             statustext.innerText = "Preparing upload...";
             uploadBtn.disabled = true;
             try {
-                const formData = new FormData();
-                formData.append("username", username);
-                formData.append("room", room);
+                let data;
                 if (videofile) {
-                    formData.append("room_type", "video");   
-                } else if (musicfile) {
-                    formData.append("room_type", "music");
-                    formData.append("music_zip", musicfile); 
-                }
-                const data = await new Promise((resolve, reject) => {
-                    const xhr = new XMLHttpRequest();
-                    xhr.open("POST", "/create_room", true);
-                    xhr.upload.onprogress = (e) => {
-                        if (e.lengthComputable) {
-                            progressbar.style.display = "block";
-                            const percent = (e.loaded / e.total) * 100;
-                            progressbar.value = percent;
-                            if (musicfile) {
-                                statustext.innerText = `Uploading music: ${musicfile.name} ${percent.toFixed(2)}%`;
-                            } else {
-                                statustext.innerText = `Uploading request... ${percent.toFixed(2)}%`;
-                            }
-                        }
-                    };
-                    xhr.onload = () => {
-                        if (xhr.status === 200) {
-                            resolve(JSON.parse(xhr.responseText));
-                        } else {
-                            statustext.innerText = "❌ Failed to create room request.";
-                            progressbar.style.display = "none";
-                            reject(new Error("Failed to create room"));
-                        }
-                    };
+                    data = await fetch("/create_room", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            username: username,
+                            room: room,
+                            room_type: "video"
+                        })
+                    }).then(res => res.json());
+                    if (videofile && data.upload_url) {
+                        await new Promise((resolve, reject) => {
+                            const xhr = new XMLHttpRequest();
+                            xhr.open("PUT", data.upload_url, true);
 
-                    xhr.onerror = () => {
-                        statustext.innerText = "❌ Network error during request.";
-                        progressbar.style.display = "none";
-                        reject(new Error("Network error"));
+                            xhr.upload.onprogress = (e) => {
+                                if (e.lengthComputable) {
+                                    progressbar.style.display = "block";
+                                    const percent = (e.loaded / e.total) * 100;
+                                    progressbar.value = percent;
+                                    statustext.innerText = `Uploading video: ${videofile.name} ${percent.toFixed(2)}%`;
+                                }
+                            };
+
+                            xhr.onload = () => {
+                                if (xhr.status === 200) {
+                                    statustext.innerText = `✅ ${videofile.name} uploaded successfully`;
+                                    progressbar.style.display = "none";
+                                    resolve();
+                                } else {
+                                    statustext.innerText = `❌ Video upload failed (status ${xhr.status})`;
+                                    reject();
+                                }
+                            };
+
+                            xhr.onerror = () => {
+                                statustext.innerText = `❌ Video upload failed (network error)`;
+                                reject();
+                            };
+
+                            xhr.send(videofile);
+                        });
+
+                        if (data.room_link) {
+                            window.location.href = data.room_link;
+                        }
+                        return;
                     }
-                    xhr.send(formData);
-                });
-                if (videofile && data.upload_url) {
-                    await new Promise((resolve, reject) => {
+                }
+                if (musicfile && data.redirect_url) {
+                    const formData = new FormData();
+                    formData.append("username", username);
+                    formData.append("room", room);
+                    formData.append("room_type", "music");
+                    formData.append("music_zip", musicfile);
+
+                    data = await new Promise((resolve, reject) => {
                         const xhr = new XMLHttpRequest();
-                        xhr.open("PUT", data.upload_url, true);
+                        xhr.open("POST", "/create_room", true);
 
                         xhr.upload.onprogress = (e) => {
                             if (e.lengthComputable) {
                                 progressbar.style.display = "block";
                                 const percent = (e.loaded / e.total) * 100;
                                 progressbar.value = percent;
-                                statustext.innerText = `Uploading video: ${videofile.name} ${percent.toFixed(2)}%`;
+                                statustext.innerText = `Uploading music: ${musicfile.name} ${percent.toFixed(2)}%`;
                             }
                         };
 
                         xhr.onload = () => {
                             if (xhr.status === 200) {
-                                statustext.innerText = `✅ ${videofile.name} uploaded successfully`;
-                                progressbar.style.display = "none";
-                                resolve();
+                                resolve(JSON.parse(xhr.responseText));
                             } else {
-                                statustext.innerText = `❌ Video upload failed (status ${xhr.status})`;
-                                reject();
+                                statustext.innerText = "❌ Failed to create music room.";
+                                reject(new Error("Failed to create music room"));
                             }
                         };
 
                         xhr.onerror = () => {
-                            statustext.innerText = `❌ Video upload failed (network error)`;
-                            reject();
+                            statustext.innerText = "❌ Network error during music upload.";
+                            reject(new Error("Network error"));
                         };
 
-                        xhr.send(videofile);
+                        xhr.send(formData);
                     });
 
-                    if (data.room_link) {
-                        window.location.href = data.room_link;
+                    if (data.redirect_url) {
+                        statustext.innerText = `✅ ${musicfile.name} uploaded successfully — processing tracks...`;
+                        progressbar.style.display = "none";
+                        window.location.href = data.redirect_url;
+                        return;
                     }
-                    return;
-                }
-                if (musicfile && data.redirect_url) {
-                    statustext.innerText = `✅ ${musicfile.name} uploaded successfully — processing tracks...`;
-                    progressbar.style.display = "none";
-                    window.location.href = data.redirect_url;
-                    return;
                 }
             } catch (err) {
                 console.error(err);

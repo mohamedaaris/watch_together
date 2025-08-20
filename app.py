@@ -228,10 +228,17 @@ def login():
 @app.route('/create_room', methods=['POST'])
 @login_required
 def create_room():
-    room=request.form['room']
-    room_type = request.form.get('room_type')
-    music_zip=request.files.get('music_zip')
     user=User.query.get(session['user_id'])
+    if request.is_json:
+        data = request.get_json()
+        room = data.get('room')
+        room_type = data.get('room_type')
+        username = data.get('username')
+    else:
+        room=request.form['room']
+        room_type = request.form.get('room_type')
+        username = request.form.get('username')
+        music_zip=request.files.get('music_zip')
     existing=Room.query.filter_by(name=room).first()
     existing_q=RoomQueue.query.filter_by(name=room).first()
     if existing or existing_q:
