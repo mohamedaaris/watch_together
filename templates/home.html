@@ -346,7 +346,6 @@
                 const formData = new FormData();
                 formData.append("username", username);
                 formData.append("room", room);
-                if (videofile) formData.append("video", videofile);
                 if (musicfile) formData.append("music_zip", musicfile);
                 const data = await new Promise((resolve, reject) => {
                     const xhr = new XMLHttpRequest();
