@@ -379,12 +379,44 @@
                     }
                     xhr.send(formData);
                 });
-                if (videofile && data.room_link) {
-                statustext.innerText = `✅ Video uploaded successfully`;
-                progressbar.style.display = "none";
-                window.location.href = data.room_link;
-                return;
-            }
+                if (videofile && data.upload_url) {
+                    await new Promise((resolve, reject) => {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open("PUT", data.upload_url, true);
+
+                        xhr.upload.onprogress = (e) => {
+                            if (e.lengthComputable) {
+                                progressbar.style.display = "block";
+                                const percent = (e.loaded / e.total) * 100;
+                                progressbar.value = percent;
+                                statustext.innerText = `Uploading video: ${videofile.name} ${percent.toFixed(2)}%`;
+                            }
+                        };
+
+                        xhr.onload = () => {
+                            if (xhr.status === 200) {
+                                statustext.innerText = `✅ ${videofile.name} uploaded successfully`;
+                                progressbar.style.display = "none";
+                                resolve();
+                            } else {
+                                statustext.innerText = `❌ Video upload failed (status ${xhr.status})`;
+                                reject();
+                            }
+                        };
+
+                        xhr.onerror = () => {
+                            statustext.innerText = `❌ Video upload failed (network error)`;
+                            reject();
+                        };
+
+                        xhr.send(videofile);
+                    });
+
+                    if (data.room_link) {
+                        window.location.href = data.room_link;
+                    }
+                    return;
+                }
                 if (data.redirect_url && musicfile) {
                     await new Promise((resolve, reject) => {
                         const xhr = new XMLHttpRequest();
