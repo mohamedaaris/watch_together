@@ -1,5 +1,5 @@
 from flask import Flask,render_template,redirect,request,flash,url_for,session,send_from_directory,jsonify
-from flask_wtf import FlaskForm
+from flask_wtf import FlaskForm,CSRFProtect
 from wtforms import IntegerField, SubmitField, StringField, PasswordField
 from wtforms.validators import Length, DataRequired, Email
 from flask_sqlalchemy import SQLAlchemy
@@ -9,7 +9,7 @@ from flask_socketio import SocketIO,emit,join_room,leave_room
 from functools import wraps
 import os,socket,zipfile,io
 from base64 import urlsafe_b64encode,urlsafe_b64decode
-import boto3
+import boto3,mimetypes
 from botocore.config import Config
 from botocore.exceptions import ClientError
 from datetime import datetime,timezone
@@ -22,7 +22,7 @@ socketio=SocketIO(app,cors_allowed_origins='*',async_mode='eventlet')
 db=SQLAlchemy(app)
 os.makedirs(app.config['UPLOAD_FOLDER'],exist_ok=True)
 room_users={}
-
+CSRFProtect(app)
 R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID")
 R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
 R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY")
@@ -47,15 +47,22 @@ def r2_client():
 def r2_put_fileobj(key:str,fileobj):
     s3=r2_client()
     fileobj.seek(0)
-    s3.put_object(Bucket=R2_BUCKET,Key=key,Body=fileobj)
+    content_type, _ = mimetypes.guess_type(key)
+    if content_type is None:
+        content_type = "application/octet-stream"
+    s3.put_object(Bucket=R2_BUCKET,Key=key,Body=fileobj,ContentType=content_type)
     
 def r2_generate_presigned_get(key:str, expires: int=3600):
     if R2_PUBLIC_DOMAIN:
         return f"{R2_PUBLIC_DOMAIN.rstrip('/')}/{key}"
     s3=r2_client()
+    content_type, _ = mimetypes.guess_type(key)
+    if content_type is None:
+        content_type = "application/octet-stream"
+        
     return s3.generate_presigned_url(
         "get_object",
-        Params={"Bucket":R2_BUCKET,"Key":key},
+        Params={"Bucket":R2_BUCKET,"Key":key,"ResponseContentType": content_type,},
         ExpiresIn=expires
     )
     
@@ -200,7 +207,7 @@ def Signup():
         db.session.commit()
         session['user_id']=new_user.id
         flash('Email registered successfully','success')
-        return redirect(url_for('login'))
+        return redirect(url_for('home'))
     return render_template('Signup.html',form=form)
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -272,7 +279,8 @@ def create_room():
                     with zip_ref.open(member) as fsrc:
                         data = io.BytesIO(fsrc.read())
                         data.seek(0)
-                        safe_rel = secure_filename(member.filename).replace('\\', '/')
+                        filename = os.path.basename(member.filename)
+                        safe_rel = secure_filename(filename)
                         key = f"rooms/{room}/tracks/{safe_rel}"
                         r2_put_fileobj(key, data)
                         saved_files.append(safe_rel)
