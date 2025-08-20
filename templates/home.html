@@ -340,6 +340,7 @@
             const uploadBtn = document.getElementById('uploadBtn');
             progressbar.value = 0;
             progressbar.style.display = "none";
+            statustext.innerText = "Preparing upload...";
             uploadBtn.disabled = true;
             try {
                 const formData = new FormData();
@@ -347,14 +348,34 @@
                 formData.append("room", room);
                 if (videofile) formData.append("video", videofile);
                 if (musicfile) formData.append("music_zip", musicfile);
-                const res = await fetch('/create_room', { method: "POST", body: formData });
-                const data = await res.json();
-                if (!res.ok) {
-                    statustext.innerText = `❌ ${data.error || 'Error uploading file'}`;
-                    uploadBtn.disabled = false;
-                    return;
-                }
+                const data = await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open("POST", "/create_room", true);
+                    xhr.upload.onprogress = (e) => {
+                        if (e.lengthComputable) {
+                            progressbar.style.display = "block";
+                            const percent = (e.loaded / e.total) * 100;
+                            progressbar.value = percent;
+                            statustext.innerText = `Uploading to server: ${percent.toFixed(2)}%`;
+                        }
+                    };
+                    xhr.onload = () => {
+                        if (xhr.status === 200) {
+                            resolve(JSON.parse(xhr.responseText));
+                        } else {
+                            statustext.innerText = "❌ Failed to create room request.";
+                            progressbar.style.display="none";
+                            reject(new Error("Failed to create room"));
+                        }
+                    };
 
+                    xhr.onerror = () =>{
+                        statustext.innerText = "❌ Network error during request.";
+                        progressbar.style.display="none";
+                        reject(new Error("Network error"));
+                    } 
+                    xhr.send(formData);
+                });
                 if (data.upload_url && videofile) {
                     await new Promise((resolve, reject) => {
                         const xhr = new XMLHttpRequest();
@@ -364,17 +385,17 @@
                                 progressbar.style.display = "block";
                                 const percent = (e.loaded / e.total) * 100;
                                 progressbar.value = percent;
-                                statustext.innerText = `Uploading video: ${videofile.name}: ${percent.toFixed(2)}%`;
+                                statustext.innerText = `Uploading video: ${videofile.name} ${percent.toFixed(2)}%`;
                             }
                         };
                         xhr.onload = () => {
-                            if (xhr.status == 200) {
-                                statustext.innerText = `✅ ${videofile.name} uploaded successfully<br>`;
+                            if (xhr.status === 200) {
+                                statustext.innerText = `✅ ${videofile.name} uploaded successfully`;
                                 resolve();
-                            }
-                            else {
+                            } else {
                                 statustext.innerText = `❌ ${videofile.name} upload failed (status ${xhr.status})`;
-                                reject();
+                                progressbar.style.display = "none";
+                                reject(new Error("Video upload failed"));
                             }
                         };
                         xhr.onerror = () => {
@@ -385,12 +406,41 @@
                     });
                 }
                 if (data.redirect_url && musicfile) {
-                    statustext.innerText = `✅ Music ZIP uploaded: ${musicfile.name}`;
-                    window.location.href = data.redirect_url;
+                    await new Promise((resolve, reject) => {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open("PUT", data.redirect_url, true);
+
+                        xhr.upload.onprogress = (e) => {
+                            if (e.lengthComputable) {
+                                progressbar.style.display = "block";
+                                const percent = (e.loaded / e.total) * 100;
+                                progressbar.value = percent;
+                                statustext.innerText = `Uploading music ZIP: ${musicfile.name} ${percent.toFixed(2)}%`;
+                            }
+                        };
+
+                        xhr.onload = () => {
+                            if (xhr.status === 200) {
+                                statustext.innerText = `✅ ${musicfile.name} uploaded successfully`;
+                                progressbar.style.display = "none";
+                                resolve();
+                            } else {
+                                statustext.innerText = `❌ ${musicfile.name} upload failed (status ${xhr.status})`;
+                                reject();
+                            }
+                        };
+
+                        xhr.onerror = () => {
+                            statustext.innerText = `❌ ${musicfile.name} upload failed (network error)`;
+                            reject();
+                        };
+
+                        xhr.send(musicfile);
+                    });
+                    if (data.room_link) {
+                        window.location.href = data.room_link;
+                    }
                     return;
-                }
-                if (data.room_link) {
-                    window.location.href = data.room_link;
                 }
             } catch (err) {
                 console.error(err);
