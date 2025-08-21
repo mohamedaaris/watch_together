@@ -208,6 +208,7 @@
 </head>
 
 <body>
+    <button id="leaveRoomBtn">Leave Room</button>
     <div class="container">
         <h2>Room code:{{room}}</h2>
         {% if is_host %}
@@ -216,7 +217,7 @@
         <p>You are a participant.</p>
         {% endif %}
         <p>Welcome {{username}}!</p>
-        <button id="leaveRoomBtn">Leave Room</button>
+        
         <video id="videoPlayer" controls>
             <source src="{{ video_url }}" type="video/mp4">
             your browser does not support this video tag.

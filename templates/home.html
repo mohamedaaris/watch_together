@@ -435,7 +435,7 @@
                 }
             } catch (err) {
                 console.error(err);
-                statustext.innerText = "❌ Error uploading files!";
+                statustext.innerText = `❌ ${err.message || "Unexpected error occurred."}`;
             } finally {
                 uploadBtn.disabled = false;
             }
