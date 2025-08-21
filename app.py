@@ -231,9 +231,17 @@ def create_room():
     room=request.form['room']
     video=request.files.get('video')
     music_zip=request.files.get('music_zip')
-    user=User.query.get(session['user_id'])
+    username = request.form.get('username')
+    if not username:
+        return jsonify({"error": "Username is required"}), 400
+    user = User.query.filter_by(name=username).first()
+    if not user:
+        user = User(name=username)
+        db.session.add(user)
+        db.session.commit()
     existing=Room.query.filter_by(name=room).first()
     existing_q=RoomQueue.query.filter_by(name=room).first()
+    
     if existing or existing_q:
         return jsonify({"error": "Room already exists. Choose another."}), 400
     room_type='video' if (video and video.filename) else 'music' if(music_zip and music_zip.filename) else None

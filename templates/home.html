@@ -330,6 +330,11 @@
             const room = document.querySelector("input[name='room']").value;
             const videofile = document.getElementById('videoInput').files[0];
             const musicfile = document.getElementById('musicInput').files[0];
+            if (!username) {
+                alert("Please enter a username");
+                return;
+            }
+
             if (!videofile && !musicfile) {
                 alert("Please select atleast one file");
                 return;
@@ -351,6 +356,7 @@
                 const data = await new Promise((resolve, reject) => {
                     const xhr = new XMLHttpRequest();
                     xhr.open("POST", "/create_room", true);
+                    xhr.withCredentials = true;
                     xhr.upload.onprogress = (e) => {
                         if (e.lengthComputable) {
                             progressbar.style.display = "block";
@@ -364,12 +370,15 @@
                         }
                     };
                     xhr.onload = () => {
+                        let resp;
+                        try { resp = JSON.parse(xhr.responseText); } catch (e) { }
                         if (xhr.status === 200) {
-                            resolve(JSON.parse(xhr.responseText));
+                            resolve(resp);
                         } else {
-                            statustext.innerText = "❌ Failed to create room request.";
+                            const msg = resp && resp.error ? resp.error : "Failed to create room request.";
+                            statustext.innerText = `❌ ${msg}`;
                             progressbar.style.display = "none";
-                            reject(new Error("Failed to create room"));
+                            reject(new Error(msg));
                         }
                     };
 
