@@ -226,6 +226,7 @@ def login():
 
 @csrf.exempt
 @app.route('/create_room', methods=['POST'])
+@login_required
 def create_room():
     room=request.form['room']
     video=request.files.get('video')
@@ -235,9 +236,7 @@ def create_room():
         return jsonify({"error": "Username is required"}), 400
     user = User.query.filter_by(name=username).first()
     if not user:
-        user = User(name=username)
-        db.session.add(user)
-        db.session.commit()
+        return jsonify({"error": "User not found. Please log in or sign up."}), 400
     existing=Room.query.filter_by(name=room).first()
     existing_q=RoomQueue.query.filter_by(name=room).first()
     
