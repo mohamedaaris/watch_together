@@ -226,7 +226,6 @@ def login():
 
 @csrf.exempt
 @app.route('/create_room', methods=['POST'])
-@login_required
 def create_room():
     room=request.form['room']
     video=request.files.get('video')
