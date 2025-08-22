@@ -452,15 +452,19 @@ def handle_leave_room(data):
 def handle_send_sync(data):
     target = data['target']  
     room = data['room']
-    track = data['track']
     time_pos = data['time']
     is_playing = data['isPlaying']
     
-    emit('sync_playback', {
-        'track': track,
+    payload = {
         'time': time_pos,
         'isPlaying': is_playing
-    }, room=room)
+    }
+    if "speed" in data:
+        payload['speed']=data['speed']
+        
+    if 'track' in data:
+        payload['track']=data['track']
+    emit('sync_playback', payload, room=target)
     
 @socketio.on('video_event')
 def handle_video_event(data):
