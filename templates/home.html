@@ -164,6 +164,14 @@
         .form-container {
             width: 100%;
         }
+        #vanta-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+        }
 
         .toggle-btn {
             background: none;
@@ -343,11 +351,11 @@
             </div>
         </div>
     </div>
-    <script src="three.r134.min.js"></script>
-    <script src="vanta.globe.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanta/0.5.21/vanta.globe.min.js"></script>
     <script>
         VANTA.GLOBE({
-            el: "#your-element-selector",
+            el: "#vanta-bg",
             mouseControls: true,
             touchControls: true,
             gyroControls: false,
