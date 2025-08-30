@@ -297,7 +297,7 @@
             <a href="{{ url_for('login') }}">Login</a>
             <a href="{{ url_for('Signup') }}">Signup</a>
             {% if user_role == 'admin' %}
-            <a href="{{ url_for('admin_rooms') }}">Admin Rooms</a>
+            <a href="{{ url_for('rooms') }}">Admin Rooms</a>
             {% endif %}
             <a href="{{ url_for('logout') }}">logout</a>
         </div>
