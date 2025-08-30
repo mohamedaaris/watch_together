@@ -164,6 +164,7 @@
         .form-container {
             width: 100%;
         }
+
         #vanta-bg {
             position: fixed;
             top: 0;
@@ -249,6 +250,11 @@
             .upload-btn {
                 width: 95%;
             }
+
+            .slider-wrapper {
+                width: 90%;
+                margin: 20px auto;
+            }
         }
 
         @media (min-width: 769px) {
@@ -279,8 +285,23 @@
             }
 
             .slider-wrapper {
-                max-width: 1000px;
-                margin: auto;
+                max-width: 500px;
+                margin-left: 20px;
+                margin-right: 0;
+                position: relative;
+                z-index: 2;
+                overflow: hidden;
+            }
+
+            .slider-container {
+                width: 200%;
+                display: flex;
+                transition: transform 0.5s ease-in-out;
+            }
+
+            .form-container {
+                width: 50%;
+                flex-shrink: 0;
             }
         }
     </style>
@@ -354,16 +375,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vanta/0.5.21/vanta.globe.min.js"></script>
     <script>
-        VANTA.GLOBE({
-            el: "#vanta-bg",
-            mouseControls: true,
-            touchControls: true,
-            gyroControls: false,
-            minHeight: 200.00,
-            minWidth: 200.00,
-            scale: 1.00,
-            scaleMobile: 1.00
-        })
+        document.addEventListener("DOMContentLoaded", function () {
+            VANTA.GLOBE({
+                el: "#vanta-bg",
+                mouseControls: true,
+                touchControls: true,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                scale: 1.00,
+                scaleMobile: 1.00
+            });
+        });
     </script>
     <script>
         const slider = document.getElementById('slider');
