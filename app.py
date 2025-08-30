@@ -212,7 +212,7 @@ def index():
         return redirect(url_for('home'));
     return redirect(url_for('login'))
 
-@app.route('/rooms')
+@app.route('/admin_rooms')
 @admin_required
 def room_list():
     rooms=Room.query.all()
@@ -619,6 +619,7 @@ def handle_chat_message(data):
 # =========================
 @app.route('/admin/storage')
 @login_required
+@admin_required
 def admin_storage():
     try:
         bytes_used = r2_total_bytes()
@@ -632,14 +633,9 @@ def admin_storage():
         return f"R2 used: {gb:.2f} GB"
     return f"R2 used: {mb:.2f} MB"
 
-@app.route('/admin/queue')
-@login_required
-def admin_queue():
-    q = RoomQueue.query.order_by(RoomQueue.created_at.asc()).all()
-    return render_template("room_info.html", queue=q) 
-
 @app.route('/admin/release-queue', methods=['POST'])
 @login_required
+@admin_required
 def admin_release_queue():
     if release_queue():
         flash("queued rooms has been released.", "success")
