@@ -203,7 +203,8 @@
 
         /* Responsive */
         @media (max-width: 768px) {
-            .hero h2 {
+            .hero h2,.hero p {
+                color: white;
                 font-size: 28px;
             }
 
@@ -281,21 +282,39 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanta/0.5.21/vanta.globe.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vanta@0.5.21/dist/vanta.globe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vanta@0.5.21/dist/vanta.net.min.js"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            VANTA.GLOBE({
-                el: "#vanta-bg",
-                mouseControls: true,
-                touchControls: true,
-                gyroControls: false,
-                minHeight: 200.00,
-                minWidth: 200.00,
-                scale: 1.00,
-                scaleMobile: 1.00
-            });
-        });
+        let vantaeffect;
+        function initVanta() {
+            const ismobile = window.innerWidth <= 768;
+            if (vantaeffect) vantaeffect.destroy();
+            vantaeffect = ismobile
+                ? VANTA.NET({
+                    el: "#vanta-bg",
+                    mouseControls: true,
+                    touchControls: true,
+                    minHeight: 200.0,
+                    minWidth: 200.0,
+                    scale: 1.0,
+                    scaleMobile: 1.0,
+                    color: 0x00ffff,
+                    backgroundColor: 0x000000
+                })
+                : VANTA.GLOBE({
+                    el: "#vanta-bg",
+                    mouseControls: true,
+                    touchControls: true,
+                    gyroControls: false,
+                    minHeight: 200.00,
+                    minWidth: 200.00,
+                    scale: 1.00,
+                    scaleMobile: 1.00
+                });
+        }
+        initVanta();
+        window.addEventListener("resize", () => { initVanta(); });
     </script>
 
     <script>
