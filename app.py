@@ -189,7 +189,7 @@ def release_queue():
 
 def admin_required(f):
     def wrapper(*args, **kwargs):
-        user=session.get("user")
+        user=session.get("user_id")
         if not user or user.get("role")!="admin":
             abort(403)
         return f(*args, **kwargs)
@@ -212,7 +212,7 @@ def index():
         return redirect(url_for('home'));
     return redirect(url_for('login'))
 
-@app.route('/rooms')
+@app.route('/admin/rooms')
 @admin_required
 def room_list():
     rooms=Room.query.all()
@@ -633,13 +633,7 @@ def admin_storage():
         return f"R2 used: {gb:.2f} GB"
     return f"R2 used: {mb:.2f} MB"
 
-@app.route('/admin/queue')
-@login_required
-@admin_required
-def admin_queue():
-    rooms=Room.query.all()
-    queues = RoomQueue.query.order_by(RoomQueue.created_at.asc()).all()
-    return render_template("room_info.html", rooms=rooms, queues=queues)
+
 
 @app.route('/admin/release-queue', methods=['POST'])
 @login_required
