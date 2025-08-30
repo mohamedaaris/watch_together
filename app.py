@@ -126,7 +126,7 @@ class RoomQueue(db.Model):
     
 class RoomMember(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    room_id = db.Column(db.Integer, db.ForeignKey('room.id'), nullable=False)
+    room_id = db.Column(db.Integer, db.ForeignKey('room.id', ondelete='CASCADE'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     joined_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     room = db.relationship("Room", backref="memberships")
@@ -330,8 +330,12 @@ def create_room():
     new_room=Room(name=room,host_id=user.id,room_type=room_type,file_name=secure_filename(upload_file.filename),status="active",members=1)
     db.session.add(new_room)
     db.session.flush()
+    if new_room.id is None:
+        db.session.rollback()
+        return jsonify({"error": "Room creation failed."}), 500
     room_member=RoomMember(room_id=new_room.id,user_id=user.id)
     db.session.add(room_member)
+    db.session.flush()
     db.session.commit()
     
     if room_type=='video':
@@ -395,7 +399,8 @@ def join_room_by_link(room):
     user=User.query.get(session['user_id'])
     existing_member=RoomMember.query.filter_by(room_id=room_obj.id, user_id=user.id).first()
     if not existing_member:
-        db.session.add(RoomMember(room_id=room_obj.id, user_id=user.id))
+        room_member = RoomMember(room_id=room_obj.id, user_id=user.id)
+        db.session.add(room_member)
         db.session.commit()
     room_obj.members = room_obj.members_count
     db.session.commit()
