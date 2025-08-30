@@ -303,7 +303,7 @@
         </div>
     </div>
     <div class="container">
-        <p>Welcome to the home page</p>
+        <p style="color: white;">Welcome to the home page</p>
         {% with messages=get_flashed_messages(with_categories=True) %}
         {% for category,message in messages %}
         <p class="{{category}}">{{ message }}</p>
@@ -387,6 +387,9 @@
         window.addEventListener("resize", () => { initVanta(); });
     </script>
     <script>
+        function toggleMenu() {
+            document.getElementById("navLinks").classList.toggle("show");
+        }
         const slider = document.getElementById('slider');
         function slide_to_create() {
             slider.style.transform = 'translateX(0)';
