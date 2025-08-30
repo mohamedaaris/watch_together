@@ -61,7 +61,7 @@
             border-radius: 8px;
             background: #2a2a2a;
             color: #fff;
-            font-family:'Orbitron', sans-serif;
+            font-family: 'Orbitron', sans-serif;
             font-size: 16px;
             box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
             outline: none;
@@ -81,9 +81,18 @@
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-family:'Orbitron', sans-serif;
+            font-family: 'Orbitron', sans-serif;
             font-size: 16px;
             transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        #tsparticles {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            top: 0;
+            left: 0;
         }
 
         .submit-btn:hover {
@@ -131,6 +140,44 @@
 </head>
 
 <body>
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@3.0.3/tsparticles.bundle.min.js"></script>
+    <script>
+        tsParticles.load("tsparticles", {
+            background: { color: "#000000" },
+            particles: {
+                number: { value: 400 },
+                color: { value: ["#ffffff", "#ffe9c4", "#d4fbff"] }, // star colors
+                shape: { type: "circle" },
+                opacity: {
+                    value: 0.8,
+                    random: true,
+                    anim: { enable: true, speed: 1, opacity_min: 0.3, sync: false }
+                },
+                size: {
+                    value: 2,
+                    random: true,
+                    anim: { enable: true, speed: 2, size_min: 0.3, sync: false }
+                },
+                move: { enable: true, speed: 0.2, direction: "none", outModes: "out" }
+            },
+            interactivity: {
+                events: { onhover: { enable: true, mode: "repulse" } },
+                modes: { repulse: { distance: 80 } }
+            },
+            emitters: [
+                {
+                    position: { x: 50, y: 50 },
+                    rate: { delay: 0.2, quantity: 2 },
+                    particles: {
+                        color: { value: ["#ff4b1f", "#1fddff", "#ffcc70"] }, // nebula colors
+                        opacity: { value: 0.2 },
+                        size: { value: { min: 50, max: 120 } },
+                        move: { speed: { min: 0.1, max: 0.3 }, direction: "none", outModes: "out" }
+                    }
+                }
+            ]
+        });
+    </script>
     <div class="form-container">
         {% block content %}{% endblock %}
     </div>
