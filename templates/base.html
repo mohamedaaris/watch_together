@@ -140,6 +140,7 @@
 </head>
 
 <body>
+    <div id="tsparticles"></div>
     <script src="https://cdn.jsdelivr.net/npm/tsparticles@3.0.3/tsparticles.bundle.min.js"></script>
     <script>
         tsParticles.load("tsparticles", {
@@ -158,11 +159,11 @@
                     random: true,
                     anim: { enable: true, speed: 2, size_min: 0.3, sync: false }
                 },
-                move: { enable: true, speed: 0.2, direction: "none", outModes: "out" }
+                move: { enable: true, speed: 0.2, direction: "none", outModes: "out", attract: { enable: true, rotateX: 600, rotateY: 1200 } }
             },
             interactivity: {
-                events: { onhover: { enable: true, mode: "repulse" } },
-                modes: { repulse: { distance: 80 } }
+                events: { onhover: { enable: true, mode: "grab" },onclick: { enable: true, mode: "push" } },
+                modes: { repulse: { distance: 80 }, grab: { distance: 120, line_linked: { opacity: 0.2 } } }
             },
             emitters: [
                 {
