@@ -141,6 +141,9 @@
 
 <body>
     <div id="tsparticles"></div>
+    <div class="form-container">
+        {% block content %}{% endblock %}
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/tsparticles@3.0.3/tsparticles.bundle.min.js"></script>
     <script>
         tsParticles.load("tsparticles", {
@@ -179,9 +182,7 @@
             ]
         });
     </script>
-    <div class="form-container">
-        {% block content %}{% endblock %}
-    </div>
+    
 </body>
 
 </html>
