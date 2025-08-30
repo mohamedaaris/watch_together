@@ -246,7 +246,9 @@ def delete_room(room_id):
 @app.route('/home')
 @login_required
 def home():
-    return render_template('home.html')
+    user = User.query.get(session['user_id'])
+    role = user.role if user else "user"
+    return render_template('home.html',user_role=role)
 
 @app.route('/landing')
 def landing():
@@ -258,8 +260,13 @@ def landing():
             if img.lower().endswith((".png", ".jpg", ".jpeg", ".gif"))
         ]
         images.sort()
-    user=User.query.get(session['user_id'])
-    role=user.role if user else "user"
+    user_id = session.get('user_id')
+    if user_id:
+        user = db.session.get(User, user_id)  # SQLAlchemy 2.x style
+        role = user.role if user else "user"
+    else:
+        user = None
+        role = "user"
     return render_template("landing.html", images=images, user_role=role)
 
 @app.route('/Signup', methods=['GET', 'POST']) 

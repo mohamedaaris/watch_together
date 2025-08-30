@@ -44,21 +44,21 @@
   </div>
 
   <div class="row" id="roomList">
+    {% set total_rooms = rooms|length + queues|length %}
+    {% if total_rooms == 0 %}
+      <p class="text-muted">No rooms available.</p>
+    {% else %}
     {% for room in rooms %}
       <div class="col-md-4 room-card" data-status="{{ room.status }}" data-name="{{ room.name | lower }}">
         <div class="card shadow-sm mb-4">
           <div class="card-body">
             <h5 class="card-title">{{ room.name }}</h5>
-            <p><strong>Members:</strong> {{ room.members }}</p>
+            <p><strong>Members:</strong> {{ room.members_count }}</p>
             <p><strong>Type:</strong> {{ room.room_type }}</p>
             <p><strong>File:</strong> {{ room.file_name or "None" }}</p>
             <p>
               <strong>Status:</strong>
-              {% if room.status == "active" %}
-                <span class="badge bg-success status-blink">Active</span>
-              {% else %}
-                <span class="badge bg-warning text-dark status-blink">Queued</span>
-              {% endif %}
+              <span class="badge bg-success status-blink">Active</span>
             </p>
             <form action="{{ url_for('delete_room', room_id=room.id) }}" method="POST">
               <button type="submit" class="btn btn-sm btn-danger">Delete</button>
@@ -66,9 +66,27 @@
           </div>
         </div>
       </div>
-    {% else %}
-      <p class="text-muted">No rooms available.</p>
     {% endfor %}
+    {% for queue in queues %}
+        <div class="col-md-4 room-card" data-status="queued" data-name="{{ queue.name | lower }}">
+          <div class="card shadow-sm mb-4">
+            <div class="card-body">
+              <h5 class="card-title">{{ queue.name }}</h5>
+              <p><strong>Members:</strong> 0</p>
+              <p><strong>Type:</strong> {{ queue.room_type }}</p>
+              <p><strong>File:</strong> {{ queue.file_name or "None" }}</p>
+              <p>
+                <strong>Status:</strong>
+                <span class="badge bg-warning text-dark status-blink">Queued</span>
+              </p>
+              <form action="{{ url_for('delete_room', room_id=queue.id) }}" method="POST">
+                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+      {% endif %}
   </div>
 </div>
 
