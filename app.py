@@ -329,8 +329,7 @@ def create_room():
         return jsonify({"error": "Storage almost full (≥ 9GB). Your room request is queued until space frees up."}), 400
     new_room=Room(name=room,host_id=user.id,room_type=room_type,file_name=secure_filename(upload_file.filename),status="active",members=1)
     db.session.add(new_room)
-    db.session.commit()
-    
+    db.session.flush()
     room_member=RoomMember(room_id=new_room.id,user_id=user.id)
     db.session.add(room_member)
     db.session.commit()
