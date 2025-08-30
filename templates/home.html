@@ -15,29 +15,36 @@
         }
 
         .navbar {
-            background-color: black;
-            padding: 5px 10px;
+            background: black;
             color: white;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
 
         .navbar h1 {
-            display: inline-block;
-            font-size: 30px;
-            padding: 5px;
+            margin: 0;
+            font-size: 26px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
         }
 
         .navbar a {
-            display: inline-block;
-            padding: 10px 10px;
             color: white;
-            cursor: pointer;
-            font-size: 17px;
             text-decoration: none;
-            text-align: center;
+            font-size: 16px;
+            transition: 0.3s;
         }
 
         .navbar a:hover {
-            background-color: cyan;
+            color: cyan;
         }
 
         .form-box {
@@ -194,13 +201,25 @@
 
         /* Tablet screens (600px - 1024px) */
         @media (min-width: 601px) and (max-width: 1024px) {
-            .navbar h1 {
-                font-size: 26px;
+            .nav-links {
+                flex-direction: column;
+                display: none;
+                background: black;
+                position: absolute;
+                top: 60px;
+                right: 0;
+                padding: 15px;
+                border-radius: 0 0 8px 8px;
             }
 
-            .navbar .buttons a {
-                padding: 9px;
-                font-size: 15px;
+            .nav-links.show {
+                display: flex;
+            }
+
+            .menu-toggle {
+                display: block;
+                cursor: pointer;
+                font-size: 24px;
             }
 
             .form-box {
@@ -221,6 +240,11 @@
             input[type="submit"],
             .upload-btn {
                 width: 95%;
+            }
+        }
+        @media (min-width: 769px) {
+            .menu-toggle {
+                display: none;
             }
         }
 
@@ -246,10 +270,22 @@
                 margin: auto;
             }
         }
+        
     </style>
 </head>
 
 <body>
+    <div class="navbar">
+        <h1>My App</h1>
+        <span class="menu-toggle" onclick="toggleMenu()">☰</span>
+        <div class="nav-links" id="navLinks">
+            <a href="{{ url_for('home') }}">Home</a>
+            <a href="{{ url_for('login') }}">Login</a>
+            <a href="{{ url_for('Signup') }}">Signup</a>
+            <a href="{{ url_for('admin_queue') }}">Admin Queue</a>
+            <a href="{{ url_for('logout') }}">logout</a>
+        </div>
+    </div>
     <div class="container">
         <p>Welcome to the home page</p>
         {% with messages=get_flashed_messages(with_categories=True) %}

@@ -23,7 +23,6 @@ socketio=SocketIO(app,cors_allowed_origins='*',async_mode='eventlet')
 db=SQLAlchemy(app)
 os.makedirs(app.config['UPLOAD_FOLDER'],exist_ok=True)
 room_users={}
-room_now_playing={}
 csrf=CSRFProtect(app)
 R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID")
 R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
@@ -101,6 +100,7 @@ class User(db.Model):
     name=db.Column(db.String(250),nullable=False)
     email=db.Column(db.String(250),unique=True,nullable=False)
     password=db.Column(db.String(250),nullable=False)
+    role = db.Column(db.String(20), default="user") 
 
 class Room(db.Model):
     id=db.Column(db.Integer,primary_key=True)

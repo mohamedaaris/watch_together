@@ -86,11 +86,11 @@
             outline: none;
         }
 
-        .controls {
+        #controls {
             margin-top: 10px;
         }
 
-        .controls button {
+        #controls button {
             background: #00c9ff;
             color: black;
             border: none;
@@ -104,7 +104,7 @@
             user-select: none;
         }
 
-        .controls button:active {
+        #controls button:active {
             transform: scale(0.96);
         }
 
@@ -254,6 +254,7 @@
             transform: scale(1.05);
             box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
         }
+        
 
         #leaveRoomBtn {
             margin-top: 15px;
@@ -324,8 +325,7 @@
             <h4>Music Queue</h4>
             <ul id="playlist" class="playlist">
                 {% for track in music_files %}
-                <li data-index="{{loop.index0}}"
-                    data-src="{{ track.url }}">
+                <li data-index="{{loop.index0}}" data-src="{{ track.url }}">
                     {{ track.name }}
                 </li>
                 {% endfor %}
@@ -336,8 +336,6 @@
             <audio id="audioplayer" controls></audio>
             <div id="controls">
                 <button id="prevBtn">Prev</button>
-                <button id="playBtn">Play</button>
-                <button id="pauseBtn">Pause</button>
                 <button id="nextBtn">Next</button>
                 <button id="shuffleBtn">Shuffle</button>
             </div>
@@ -423,21 +421,15 @@
             let idx = Math.floor(Math.random() * playlist.length);
             socket.emit("track_change", { track: idx, room })
         }
-        document.getElementById("playBtn").onclick = () => {
-            socket.emit("music_event", { action: "play", room, time: audio.currentTime, track: currentTrack })
-        }
-        document.getElementById("pauseBtn").onclick = () => {
-            socket.emit("music_event", { action: "pause", room, time: audio.currentTime, track: currentTrack })
-        }
 
         audio.addEventListener('play', () => {
             if (!issync) {
-                socket.emit('music_event', { action: "play", time: audio.currentTime, room,track: currentTrack });
+                socket.emit('music_event', { action: "play", time: audio.currentTime, room, track: currentTrack });
             }
         });
         audio.addEventListener('pause', () => {
             if (!issync) {
-                socket.emit('music_event', { action: "pause", time: audio.currentTime, room ,track: currentTrack});
+                socket.emit('music_event', { action: "pause", time: audio.currentTime, room, track: currentTrack });
             }
         });
         audio.addEventListener("ended", () => {
@@ -453,16 +445,16 @@
 
         audio.addEventListener("seeked", () => {
             if (!issync) {
-            socket.emit("seek_event", {
-                time: audio.currentTime,
-                room: room,
-                isPlaying: !audio.paused
-            });
-        }
+                socket.emit("seek_event", {
+                    time: audio.currentTime,
+                    room: room,
+                    isPlaying: !audio.paused
+                });
+            }
         });
 
         socket.on("sync_playback", (data) => {
-             issync = true;
+            issync = true;
             loadTrack(data.track, false, data.time);
             if (data.isPlaying) {
                 audio.play().catch((e) => console.warn("Audioplay blocked on sync:", e));
@@ -517,14 +509,13 @@
             }
             if (data.isPlaying && audio.paused) {
                 issync = true;
-                audio.play().catch((e) =>
-                {console.warn("Play blocked during seek:", e);});
+                audio.play().catch((e) => { console.warn("Play blocked during seek:", e); });
                 setTimeout(() => { issync = false; }, 200);
             } else if (!data.isPlaying && !audio.paused) {
-            issync = true;
-            audio.pause();
-            setTimeout(() => { issync = false; }, 200);
-        }
+                issync = true;
+                audio.pause();
+                setTimeout(() => { issync = false; }, 200);
+            }
         });
 
         socket.on('user_joined', (data) => {
