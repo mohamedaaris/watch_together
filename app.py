@@ -1,4 +1,4 @@
-from flask import Flask,render_template,redirect,request,flash,url_for,session,send_from_directory,jsonify
+from flask import Flask,render_template,redirect,abort,request,flash,url_for,session,send_from_directory,jsonify
 from flask_wtf import FlaskForm,CSRFProtect
 from wtforms import IntegerField, SubmitField, StringField, PasswordField
 from wtforms.validators import Length, DataRequired, Email
@@ -23,6 +23,7 @@ socketio=SocketIO(app,cors_allowed_origins='*',async_mode='eventlet')
 db=SQLAlchemy(app)
 os.makedirs(app.config['UPLOAD_FOLDER'],exist_ok=True)
 room_users={}
+room_now_playing={}
 csrf=CSRFProtect(app)
 R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID")
 R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
@@ -106,14 +107,30 @@ class Room(db.Model):
     name=db.Column(db.String(250),unique=True,nullable=False)
     host_id=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=False)
     room_type = db.Column(db.String(20), nullable=False)
+    members = db.Column(db.Integer, default=0)
+    file_name = db.Column(db.String(255), nullable=True)
+    status = db.Column(db.String(20), default="active")
+    
+    @property
+    def members_count(self):
+        return RoomMember.query.filter_by(room_id=self.id).count()
   
 class RoomQueue(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(250), unique=True, nullable=False)
     host_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     room_type = db.Column(db.String(20), nullable=False)
+    size_bytes = db.Column(db.BigInteger, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     status = db.Column(db.String(20), default='queued') 
+    
+class RoomMember(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    room_id = db.Column(db.Integer, db.ForeignKey('room.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    joined_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    room = db.relationship("Room", backref="memberships")
+    user = db.relationship("User", backref="rooms")
       
 class loginform(FlaskForm):
     email=StringField('Email', validators=[DataRequired(),Email()])
@@ -159,14 +176,25 @@ def release_queue():
     queued=RoomQueue.query.filter_by(status='queued').order_by(RoomQueue.created_at.asc()).all()
     released_any=False
     for rq in queued:
-        if not within_capacity(0):
+        required=rq.size_bytes
+        if not within_capacity(required):
             break
-        new_room = Room(name=rq.name, host_id=rq.host_id, room_type=rq.room_type)
+        new_room = Room(name=rq.name, host_id=rq.host_id, room_type=rq.room_type,status="active")
         db.session.add(new_room)
         db.session.delete(rq)
-        db.session.commit()
         released_any=True
+    if released_any:
+        db.session.commit()
     return released_any
+
+def admin_required(f):
+    def wrapper(*args, **kwargs):
+        user=session.get("user")
+        if not user or user.get("role")!="admin":
+            abort(403)
+        return f(*args, **kwargs)
+    wrapper.__name__=f.__name__
+    return wrapper
 
 @app.route("/upload-url/<filename>")
 def get_upload_url(filename):
@@ -184,15 +212,53 @@ def index():
         return redirect(url_for('home'));
     return redirect(url_for('login'))
 
+@app.route('/rooms')
+@admin_required
+def room_list():
+    rooms=Room.query.all()
+    queues=RoomQueue.query.all()
+    return render_template("room_info.html",rooms=rooms,queues=queues)
+
+@app.route("/api/rooms")
+@admin_required
+def api_rooms():
+    rooms=Room.query.all()
+    data=[]
+    for r in rooms:
+        data.append({
+            "id": r.id,
+            "name": r.name,
+            "members": r.members,
+            "type": r.room_type,
+            "file": r.file_name,
+            "status": r.status
+        })
+    return jsonify(data)
+
+@app.route("/delete_room/<int:room_id>", methods=["POST"])
+@admin_required
+def delete_room(room_id):
+    room=Room.query.get_or_404(room_id)
+    db.session.delete(room)
+    db.session.commit()
+    return redirect(url_for("room_list"))
+
 @app.route('/home')
 @login_required
 def home():
     return render_template('home.html')
 
-@app.route('/Dashboard')
-@login_required
-def Dashboard():
-     return "<h1>Dashboard (Under construction) </h1>"
+@app.route('/landing')
+def landing():
+    image_folder = os.path.join(app.static_folder, "uploads")
+    images = []
+    if os.path.exists(image_folder):
+        images = [
+            f"uploads/{img}" for img in os.listdir(image_folder)
+            if img.lower().endswith((".png", ".jpg", ".jpeg", ".gif"))
+        ]
+        images.sort()
+    return render_template("landing.html", images=images)
 
 @app.route('/Signup', methods=['GET', 'POST']) 
 def Signup():
@@ -208,7 +274,7 @@ def Signup():
         db.session.commit()
         session['user_id']=new_user.id
         flash('Email registered successfully','success')
-        return redirect(url_for('home'))
+        return redirect(url_for('landing'))
     return render_template('Signup.html',form=form)
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -219,10 +285,15 @@ def login():
         if user and check_password_hash(user.password,form.password.data):
             session['user_id']=user.id
             flash("login successfull","success")
-            return redirect(url_for('home'))
+            return redirect(url_for('landing'))
         else:
             flash("Invalid email or password! Try again","error")
     return render_template('login.html', form=form)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
 
 @csrf.exempt
 @app.route('/create_room', methods=['POST'])
@@ -252,13 +323,18 @@ def create_room():
             upload_file.stream.seek(0)
 
     if not within_capacity(incoming_bytes):
-        rq = RoomQueue(name=room, host_id=user.id, room_type=room_type)
+        rq = RoomQueue(name=room, host_id=user.id, room_type=room_type,file_name=secure_filename(upload_file.filename),size_bytes=incoming_bytes,status="queued")
         db.session.add(rq)
         db.session.commit()
         return jsonify({"error": "Storage almost full (≥ 9GB). Your room request is queued until space frees up."}), 400
-    new_room=Room(name=room,host_id=user.id,room_type=room_type)
+    new_room=Room(name=room,host_id=user.id,room_type=room_type,file_name=secure_filename(upload_file.filename),status="active",members=1)
     db.session.add(new_room)
     db.session.commit()
+    
+    room_member=RoomMember(room_id=new_room.id,user_id=user.id)
+    db.session.add(room_member)
+    db.session.commit()
+    
     if room_type=='video':
         key=f"rooms/{room}/video.mp4"
         url=r2_client().generate_presigned_url(
@@ -316,6 +392,15 @@ def join_room_by_link(room):
     if not room_obj:
         flash("Room does not exist", "error")
         return redirect(url_for('home'))
+    
+    user=User.query.get(session['user_id'])
+    existing_member=RoomMember.query.filter_by(room_id=room_obj.id, user_id=user.id).first()
+    if not existing_member:
+        db.session.add(RoomMember(room_id=room_obj.id, user_id=user.id))
+        db.session.commit()
+    room_obj.members = room_obj.members_count
+    db.session.commit()
+    
     if room_obj.room_type=='video':
         return redirect(url_for('room', room=room, encrypted_username=encrypted_username))
     elif room_obj.room_type == 'music':
@@ -431,14 +516,16 @@ def handle_leave_room(data):
     if room in room_users and username in room_users[room]:
         room_users[room].remove(username)
     emit('chat_message', {'username': 'System', 'message': f'{username} has left the room.'}, room=room)
+    room_obj = Room.query.filter_by(name=room).first()
+    if room_obj:
+        room_obj.members = RoomMember.query.filter_by(room_id=room_obj.id).count()
+        db.session.commit()
+        
     if room in room_users and len(room_users[room])==0:
         del room_users[room]
-        
         session_key='music_files_'+room
         if session_key in session:
             session.pop(session_key)
-            
-        room_obj=Room.query.filter_by(name=room).first()
         if room_obj:
             try:
                 r2_delete_prefix(f"rooms/{room}/")
@@ -536,7 +623,7 @@ def admin_storage():
 @login_required
 def admin_queue():
     q = RoomQueue.query.order_by(RoomQueue.created_at.asc()).all()
-    return render_template("admin_queue.html", queue=q) 
+    return render_template("room_info.html", queue=q) 
 
 @app.route('/admin/release-queue', methods=['POST'])
 @login_required
