@@ -102,6 +102,7 @@
               <span class="badge bg-success status-blink">Active</span>
             </p>
             <form action="{{ url_for('delete_room', room_id=room.id) }}" method="POST" class="mt-auto">
+              {{ csrf_token() }}
               <button type="submit" class="btn btn-sm btn-danger w-100">Delete</button>
             </form>
           </div>
@@ -121,6 +122,7 @@
               <span class="badge bg-warning text-dark status-blink">Queued</span>
             </p>
             <form action="{{ url_for('delete_room', room_id=queue.id) }}" method="POST" class="mt-auto">
+              {{ csrf_token() }}
               <button type="submit" class="btn btn-sm btn-danger w-100">Delete</button>
             </form>
           </div>

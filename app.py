@@ -199,6 +199,7 @@ def admin_required(f):
         return f(*args, **kwargs)
     return wrapper
 
+@csrf.exempt
 @app.route("/upload-url/<filename>")
 def get_upload_url(filename):
     s3=r2_client()
@@ -234,7 +235,7 @@ def api_rooms():
             "members": r.members,
             "type": r.room_type,
             "file": r.file_name,
-            "status": r.status
+            "status": r.statugs
         })
     return jsonify(data)
 
