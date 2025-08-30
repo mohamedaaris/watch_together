@@ -243,7 +243,7 @@
             }
         }
 
-        @media (min-width: 1025px) {
+        @media (min-width: 769px) {
             .menu-toggle {
                 display: none;
             }
@@ -286,7 +286,9 @@
             <a href="{{ url_for('landing') }}">Home</a>
             <a href="{{ url_for('login') }}">Login</a>
             <a href="{{ url_for('Signup') }}">Signup</a>
+            {% if user_role == 'admin' %}
             <a href="{{ url_for('admin_queue') }}">Admin Queue</a>
+            {% endif %}
             <a href="{{ url_for('logout') }}">logout</a>
         </div>
     </div>

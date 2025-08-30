@@ -258,7 +258,9 @@ def landing():
             if img.lower().endswith((".png", ".jpg", ".jpeg", ".gif"))
         ]
         images.sort()
-    return render_template("landing.html", images=images)
+    user=User.query.get(session['user_id'])
+    role=user.role if user else "user"
+    return render_template("landing.html", images=images, user_role=role)
 
 @app.route('/Signup', methods=['GET', 'POST']) 
 def Signup():
