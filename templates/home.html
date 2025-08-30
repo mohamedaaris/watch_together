@@ -279,6 +279,7 @@
 </head>
 
 <body>
+    <div id="vanta-bg"></div>
     <div class="navbar">
         <h1>My App</h1>
         <span class="menu-toggle" onclick="toggleMenu()">☰</span>
@@ -342,6 +343,20 @@
             </div>
         </div>
     </div>
+    <script src="three.r134.min.js"></script>
+    <script src="vanta.globe.min.js"></script>
+    <script>
+        VANTA.GLOBE({
+            el: "#your-element-selector",
+            mouseControls: true,
+            touchControls: true,
+            gyroControls: false,
+            minHeight: 200.00,
+            minWidth: 200.00,
+            scale: 1.00,
+            scaleMobile: 1.00
+        })
+    </script>
     <script>
         const slider = document.getElementById('slider');
         function slide_to_create() {
