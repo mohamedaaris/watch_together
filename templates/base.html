@@ -10,7 +10,8 @@
         body {
             margin: 0;
             height: 100vh;
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            background: url('/static/images/background.jpg') no-repeat center center fixed;
+            background-size: cover;
             font-family: 'Orbitron', sans-serif;
             display: flex;
             justify-content: center;
@@ -86,15 +87,6 @@
             transition: background 0.3s ease, box-shadow 0.3s ease;
         }
 
-        #tsparticles {
-            position: fixed;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            top: 0;
-            left: 0;
-        }
-
         .submit-btn:hover {
             background: #00ffff;
             box-shadow: 0 0 20px rgba(0, 255, 255, 0.7);
@@ -140,49 +132,30 @@
 </head>
 
 <body>
-    <div id="tsparticles"></div>
     <div class="form-container">
         {% block content %}{% endblock %}
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/tsparticles@3.0.3/tsparticles.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js"></script>
+    <!-- VANTA.NET -->
+    <script src="https://cdn.jsdelivr.net/npm/vanta@0.5.21/dist/vanta.net.min.js"></script>
+
     <script>
-        tsParticles.load("tsparticles", {
-            background: { color: "#000000" },
-            particles: {
-                number: { value: 400 },
-                color: { value: ["#ffffff", "#ffe9c4", "#d4fbff"] }, // star colors
-                shape: { type: "circle" },
-                opacity: {
-                    value: 0.8,
-                    random: true,
-                    anim: { enable: true, speed: 1, opacity_min: 0.3, sync: false }
-                },
-                size: {
-                    value: 2,
-                    random: true,
-                    anim: { enable: true, speed: 2, size_min: 0.3, sync: false }
-                },
-                move: { enable: true, speed: 0.2, direction: "none", outModes: "out", attract: { enable: true, rotateX: 600, rotateY: 1200 } }
-            },
-            interactivity: {
-                events: { onhover: { enable: true, mode: "grab" },onclick: { enable: true, mode: "push" } },
-                modes: { repulse: { distance: 80 }, grab: { distance: 120, line_linked: { opacity: 0.2 } } }
-            },
-            emitters: [
-                {
-                    position: { x: 50, y: 50 },
-                    rate: { delay: 0.2, quantity: 2 },
-                    particles: {
-                        color: { value: ["#ff4b1f", "#1fddff", "#ffcc70"] }, // nebula colors
-                        opacity: { value: 0.2 },
-                        size: { value: { min: 50, max: 120 } },
-                        move: { speed: { min: 0.1, max: 0.3 }, direction: "none", outModes: "out" }
-                    }
-                }
-            ]
+        VANTA.NET({
+            el: "body",
+            mouseControls: true,
+            touchControls: true,
+            minHeight: 200.00,
+            minWidth: 200.00,
+            scale: 1.0,
+            scaleMobile: 1.0,
+            backgroundAlpha: 0,  // dark overlay to blend with galaxy
+            color: 0xffffff,            // bright points like stars
+            points: 12.00,
+            maxDistance: 20.00,
+            spacing: 18.00
         });
     </script>
-    
+
 </body>
 
 </html>
