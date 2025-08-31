@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome | My App</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
     <style>
         body {
             margin: 0;
@@ -153,6 +154,21 @@
             transform: scale(0.7);
             overflow: hidden;
         }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 26px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .brand img {
+            height: 40px;
+            width: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
 
         .cards li img {
             width: 100%;
@@ -212,6 +228,14 @@
             .hero img {
                 max-width: 90%;
             }
+            .brand img {
+                height: 32px;
+                width: 32px;
+            }
+
+            .brand span {
+                font-size: 20px;
+            }
 
             .nav-links {
                 flex-direction: column;
@@ -234,6 +258,16 @@
                 font-size: 24px;
             }
         }
+        @media (max-width: 480px) {
+            .brand img {
+                height: 28px;
+                width: 28px;
+            }
+
+            .brand span {
+                font-size: 18px;
+            }
+        }
 
         @media (min-width: 769px) {
             .menu-toggle {
@@ -246,7 +280,10 @@
 <body>
     <div id="vanta-bg"></div>
     <div class="navbar">
-        <h1>MiraiSync</h1>
+        <div class="brand">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="MiraiSync Logo">
+            <span>MiraiSync</span>
+        </div>
         <span class="menu-toggle" onclick="toggleMenu()">☰</span>
         <div class="nav-links" id="navLinks">
             <a href="{{ url_for('landing') }}">Home</a>

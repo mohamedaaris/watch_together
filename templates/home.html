@@ -3,9 +3,10 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>My Website</title>
+    <title>MiraiSync</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
         body {
@@ -174,6 +175,23 @@
             z-index: -1;
         }
 
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 26px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .brand img {
+            height: 40px;
+            width: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+
         .toggle-btn {
             background: none;
             border: none;
@@ -206,9 +224,6 @@
             background: #00faff;
             border-radius: 8px;
         }
-
-
-        /* Tablet screens (600px - 1024px) */
         @media (max-width: 768px) {
             .nav-links {
                 flex-direction: column;
@@ -219,6 +234,15 @@
                 right: 0;
                 padding: 15px;
                 border-radius: 0 0 8px 8px;
+            }
+
+            .brand img {
+                height: 32px;
+                width: 32px;
+            }
+
+            .brand span {
+                font-size: 20px;
             }
 
             .nav-links.show {
@@ -262,6 +286,17 @@
             }
         }
 
+        @media (max-width: 480px) {
+            .brand img {
+                height: 28px;
+                width: 28px;
+            }
+
+            .brand span {
+                font-size: 18px;
+            }
+        }
+
         /* Desktop large screens (1025px and up) */
         @media (min-width: 1025px) {
             .form-box {
@@ -290,7 +325,10 @@
 <body>
     <div id="vanta-bg" style="width:100vw; height:100vh;"></div>
     <div class="navbar">
-        <h1>MiraiSync</h1>
+        <div class="brand">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="MiraiSync Logo">
+            <span>MiraiSync</span>
+        </div>
         <span class="menu-toggle" onclick="toggleMenu()">☰</span>
         <div class="nav-links" id="navLinks">
             <a href="{{ url_for('landing') }}">Home</a>
@@ -303,7 +341,6 @@
         </div>
     </div>
     <div class="container">
-        <p style="color: white;">Welcome to the home page</p>
         {% with messages=get_flashed_messages(with_categories=True) %}
         {% for category,message in messages %}
         <p class="{{category}}">{{ message }}</p>

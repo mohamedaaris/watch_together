@@ -71,7 +71,7 @@ def r2_delete_prefix(prefix:str):
     s3=r2_client()
     paginator=s3.get_paginator("list_objects_v2")
     to_delete=[]
-    for page in paginator.paginate(Bucket=R2_BUCKET,prefix=prefix):
+    for page in paginator.paginate(Bucket=R2_BUCKET,Prefix=prefix):
         for obj in page.get("Contents",[]):
             to_delete.append({'Key':obj['Key']})
             if len(to_delete)==1000:
@@ -241,7 +241,7 @@ def api_rooms():
             "members": r.members,
             "type": r.room_type,
             "file": r.file_name,
-            "status": r.statugs
+            "status": r.status
         })
     return jsonify(data)
 
@@ -541,6 +541,9 @@ def handle_leave_room(data):
     emit('chat_message', {'username': 'System', 'message': f'{username} has left the room.'}, room=room)
     room_obj = Room.query.filter_by(name=room).first()
     if room_obj:
+        user = User.query.filter_by(name=username).first()
+        if user:
+            RoomMember.query.filter_by(room_id=room_obj.id, user_id=user.id).delete()
         room_obj.members = RoomMember.query.filter_by(room_id=room_obj.id).count()
         db.session.commit()
         
@@ -650,7 +653,7 @@ def admin_storage():
 @admin_required
 def admin_release_queue():
     if release_queue():
-        flash("queued rooms has been released.", "success")
+        flash("Queued rooms have been released.", "success")
     else:
         flash("No queued rooms released (either none in queue or capacity full).", "warning")
     return redirect(url_for('home'))
