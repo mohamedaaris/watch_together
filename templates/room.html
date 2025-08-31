@@ -156,10 +156,15 @@
             box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
         }
 
+        .welcome-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-top: 10px;
+        }
+
         #leaveRoomBtn {
-            position: fixed;
-            top: 15px;
-            left: 15px;
+            margin-top: 15px;
             background: #f44336;
             color: white;
             border: none;
@@ -170,7 +175,6 @@
             box-shadow: 0 0 10px #f44336, 0 0 20px #f44336;
             transition: transform 0.2s ease;
             font-family: 'Orbitron', sans-serif;
-            z-index: 1000;
         }
 
         #leaveRoomBtn:hover {
@@ -218,8 +222,10 @@
         {% else %}
         <p>You are a participant.</p>
         {% endif %}
-        <p>Welcome {{username}}!</p>
-        <button id="leaveRoomBtn">Leave Room</button>
+        <div class="welcome-container">
+            <h3>Welcome {{ username }}!</h3>
+            <button class="leave-btn">Leave Room</button>
+        </div>
         <video id="videoPlayer" controls>
             <source src="{{ video_url }}" type="video/mp4">
             your browser does not support this video tag.
