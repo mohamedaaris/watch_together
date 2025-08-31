@@ -156,13 +156,6 @@
             box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
         }
 
-        .welcome-container {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            margin-top: 10px;
-        }
-
         #leaveRoomBtn {
             margin-top: 15px;
             background: #f44336;
@@ -223,8 +216,8 @@
         <p>You are a participant.</p>
         {% endif %}
         <div class="welcome-container">
-            <h3>Welcome {{ username }}!</h3>
-            <button class="leave-btn">Leave Room</button>
+            <h3>Welcome {{username}}!</h3>
+             <button id="leaveRoomBtn">Leave Room</button>
         </div>
         <video id="videoPlayer" controls>
             <source src="{{ video_url }}" type="video/mp4">
