@@ -154,6 +154,7 @@
             transform: scale(0.7);
             overflow: hidden;
         }
+
         .brand {
             display: flex;
             align-items: center;
@@ -221,7 +222,9 @@
 
         /* Responsive */
         @media (max-width: 768px) {
-            .hero h2,.hero p {
+
+            .hero h2,
+            .hero p {
                 color: white;
                 font-size: 28px;
             }
@@ -229,6 +232,7 @@
             .hero img {
                 max-width: 90%;
             }
+
             .brand img {
                 height: 32px;
                 width: 32px;
@@ -259,6 +263,7 @@
                 font-size: 24px;
             }
         }
+
         @media (max-width: 480px) {
             .brand img {
                 height: 28px;
@@ -349,7 +354,9 @@
                     minHeight: 200.00,
                     minWidth: 200.00,
                     scale: 1.00,
-                    scaleMobile: 1.00
+                    scaleMobile: 1.00,
+                    color: 0x00ffff,
+                    backgroundColor: 0x000000
                 });
         }
         initVanta();
