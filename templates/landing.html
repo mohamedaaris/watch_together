@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome | My App</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}?v=2">
     <style>
         body {
             margin: 0;
@@ -56,7 +56,6 @@
         .hero {
             text-align: center;
             padding: 60px 20px;
-            backdrop-filter: blur(10px);
         }
 
         .hero h2 {
