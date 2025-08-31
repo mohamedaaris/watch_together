@@ -146,7 +146,9 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/tsparticles@3.0.3/tsparticles.bundle.min.js"></script>
     <script>
-        tsParticles.load("tsparticles", {
+        tsParticles.load({
+           id: "tsparticles",
+            options:{
             background: { color: "#000000" },
             particles: {
                 number: { value: 400 },
@@ -180,6 +182,7 @@
                     }
                 }
             ]
+          }
         });
     </script>
     
