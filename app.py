@@ -23,6 +23,7 @@ socketio=SocketIO(app,cors_allowed_origins='*',async_mode='eventlet')
 db=SQLAlchemy(app)
 os.makedirs(app.config['UPLOAD_FOLDER'],exist_ok=True)
 room_users={}
+room_state={}
 csrf=CSRFProtect(app)
 R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID")
 R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
@@ -259,6 +260,11 @@ def home():
     user = User.query.get(session['user_id'])
     role = user.role if user else "user"
     return render_template('home.html',user_role=role)
+
+def get_room_state(room):
+    if room not in room_state:
+        room_state[room] = {}
+    return room_state[room]
 
 @app.route('/landing')
 def landing():
@@ -524,6 +530,8 @@ def handle_join_room(data):
         room_users[room]=set()
     room_users[room].add(username)
     emit('user_joined',{'username':username},room=room)
+    if room in room_state:
+        emit('sync_playback', room_state[room], room=request.sid)
     room_obj = Room.query.filter_by(name=room).first()
     if room_obj and room_obj.room_type == 'music':
         host_user = User.query.get(room_obj.host_id)
@@ -549,6 +557,8 @@ def handle_leave_room(data):
         
     if room in room_users and len(room_users[room])==0:
         del room_users[room]
+        if room in room_state:  
+            del room_state[room]
         session_key='music_files_'+room
         if session_key in session:
             session.pop(session_key)
@@ -581,44 +591,66 @@ def handle_send_sync(data):
     
 @socketio.on('video_event')
 def handle_video_event(data):
-    emit('video_event',{
-        'action': data['action'],
-        'time': data['time']
-    }, room=data['room'])
+    room = data['room']
+    action = data['action']
+    time_pos = data.get('time', 0)
+    state = get_room_state(room)
+    state['time'] = time_pos
+    state['is_playing'] = action == 'play'
+
+    emit('video_event', {'action': action, 'time': time_pos}, room=room, include_self=False)
     
 @socketio.on('seek_event')
 def handle_seek_event(data):
-    emit('seek_event', {
-        'time': data['time'],
-        'isPlaying': data['isPlaying'] 
-    }, room=data['room'], include_self=False)
+    room = data['room']
+    time_pos = data['time']
+    is_playing = data['isPlaying']
+    state = get_room_state(room)
+    state['time'] = time_pos
+    state['is_playing'] = is_playing
+
+    emit('seek_event', {'time': time_pos, 'isPlaying': is_playing}, room=room)
     
 @socketio.on('music_event')
 def handle_music_event(data):
-    emit('music_event',{
-        'action': data['action'],
-        'time': data['time'],
-        'track':data["track"]
-    }, room=data['room'],include_self=False)
+    room = data['room']
+    action = data['action']
+    time_pos = data['time']
+    track = data['track']
+    state = get_room_state(room)
+    state['time'] = time_pos
+    state['is_playing'] = action == 'play'
+    state['track'] = track
+
+    emit('music_event', {'action': action, 'time': time_pos, 'track': track}, room=room, include_self=False)
 
 @socketio.on('track_change')
 def handle_track_change(data):
-    emit('track_change', {
-        'track': data['track']
-    }, room=data['room'])
+    room = data['room']
+    track = data['track']
+    state = get_room_state(room)
+    state['track'] = track
+    state['time'] = 0
+    state['is_playing'] = False
+
+    emit('track_change', {'track': track}, room=room)
 
 
 @socketio.on('music_speed')
 def handle_music_speed(data):
-    emit('music_speed', {
-        'speed': data['speed']
-    }, room=data['room'])
+    room = data['room']
+    speed = data['speed']
+    state = get_room_state(room)
+    state['speed'] = speed
+    emit('music_speed', {'speed': speed}, room=room)
     
 @socketio.on('speed_event')
 def handle_speed_event(data):
-    emit('speed_event', {
-        'speed': data['speed']
-    }, room=data['room'])
+    room = data['room']
+    speed = data['speed']
+    state = get_room_state(room)
+    state['speed'] = speed
+    emit('speed_event', {'speed': speed}, room=room)
   
 @socketio.on('chat_message')
 def handle_chat_message(data):
