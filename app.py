@@ -604,11 +604,12 @@ def handle_video_event(data):
 def handle_seek_event(data):
     room = data['room']
     time_pos = data['time']
+    is_playing = data.get('isPlaying', True)
     state = get_room_state(room)
     state['time'] = time_pos
-    state['is_playing'] = True
+    state['is_playing'] = is_playing
 
-    emit('seek_event', {'time': time_pos, 'isPlaying': True}, room=room)
+    emit('seek_event', {'time': time_pos, 'isPlaying': is_playing}, room=room)
     
 @socketio.on('music_event')
 def handle_music_event(data):
