@@ -529,10 +529,21 @@ def handle_join_room(data):
     if room not in room_users:
         room_users[room]=set()
     room_users[room].add(username)
-    emit('user_joined',{'username':username},room=room)
+    emit('chat_message', {'username': 'System', 'message': f'{username} has joined the room.'}, room=room)
+    room_obj = Room.query.filter_by(name=room).first()
+    if room_obj:
+        user = User.query.filter_by(name=username).first()
+        if user:
+            # Check if already a member
+            existing_member = RoomMember.query.filter_by(room_id=room_obj.id, user_id=user.id).first()
+            if not existing_member:
+                new_member = RoomMember(room_id=room_obj.id, user_id=user.id)
+                db.session.add(new_member)
+            # Update member count
+            room_obj.members = RoomMember.query.filter_by(room_id=room_obj.id).count()
+            db.session.commit()
     if room in room_state:
         emit('sync_playback', room_state[room], room=request.sid)
-    room_obj = Room.query.filter_by(name=room).first()
     if room_obj and room_obj.room_type == 'music':
         host_user = User.query.get(room_obj.host_id)
         host_name = host_user.name if host_user else None
@@ -604,12 +615,10 @@ def handle_video_event(data):
 def handle_seek_event(data):
     room = data['room']
     time_pos = data['time']
-    is_playing = data.get('isPlaying', True)
     state = get_room_state(room)
     state['time'] = time_pos
-    state['is_playing'] = is_playing
-
-    emit('seek_event', {'time': time_pos, 'isPlaying': is_playing}, room=room)
+    state['is_playing'] = True
+    emit('seek_event', {'time': time_pos, 'isPlaying': True}, room=room)
     
 @socketio.on('music_event')
 def handle_music_event(data):
