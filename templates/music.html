@@ -373,6 +373,7 @@
     </script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
+        document.addEventListener("DOMContentLoaded", () => {
         const socket = io();
         const room = "{{room}}";
         const username = "{{username}}";
@@ -555,6 +556,7 @@
             document.execCommand('copy');
             alert("link is copied to clipboard!");
         }
+    });
     </script>
 
 </body>
