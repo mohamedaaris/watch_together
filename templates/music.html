@@ -236,6 +236,30 @@
             font-family: 'Orbitron', sans-serif;
         }
 
+        #controls button {
+            background: #00c9ff;
+            color: black;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 17px;
+            margin: 0 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 0 8px #00c9ff;
+            user-select: none;
+        }
+
+        #controls button:active {
+            transform: scale(0.96);
+        }
+
+        #controls button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
+        }
+
+
         .copy-button {
             margin-top: 10px;
             padding: 10px 16px;
@@ -255,7 +279,7 @@
             transform: scale(1.05);
             box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
         }
-        
+
 
         #leaveRoomBtn {
             margin-top: 15px;
@@ -373,7 +397,6 @@
     </script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
         const socket = io();
         const room = "{{room}}";
         const username = "{{username}}";
@@ -556,7 +579,6 @@
             document.execCommand('copy');
             alert("link is copied to clipboard!");
         }
-    });
     </script>
 
 </body>
