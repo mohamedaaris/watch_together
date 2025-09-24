@@ -24,6 +24,7 @@ db=SQLAlchemy(app)
 os.makedirs(app.config['UPLOAD_FOLDER'],exist_ok=True)
 room_users={}
 room_state={}
+room_controls={}
 csrf=CSRFProtect(app)
 R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID")
 R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
@@ -95,6 +96,9 @@ def within_capacity(adding_bytes: int = 0):
         return (r2_total_bytes() + max(0, int(adding_bytes))) < STORAGE_THRESHOLD_BYTES
     except Exception:
         return False
+    
+def create_room(room_id, host_id):
+    room_controls[room_id] = {"host": host_id, "granted": set()}
  
 class User(db.Model):
     id=db.Column(db.Integer,primary_key=True)
@@ -581,6 +585,76 @@ def handle_leave_room(data):
             db.session.delete(room_obj)
             db.session.commit() 
             release_queue()
+
+@socketio.on("request_control")
+def handle_request_control(data):
+    room_id = data["room_id"]
+    user_id = session.get("user_id")
+    host_id = room_controls.get(room_id, {}).get("host")
+
+    if host_id:
+        socketio.emit("control_request", {"user_id": user_id}, room=host_id)
+
+@socketio.on("grant_control")
+def handle_grant_control(data):
+    room_id = data["room_id"]
+    user_id = data["user_id"]
+    if session.get("user_id") == room_controls[room_id]["host"]:
+        room_controls[room_id]["granted"].add(user_id)
+        socketio.emit("control_granted", {"user_id": user_id}, room=room_id)
+
+@socketio.on("revoke_control")
+def handle_revoke_control(data):
+    room_id = data["room_id"]
+    user_id = data["user_id"]
+    if session.get("user_id") == room_controls[room_id]["host"]:
+        room_controls[room_id]["granted"].discard(user_id)
+        socketio.emit("control_revoked", {"user_id": user_id}, room=room_id)
+
+@socketio.on("playback_action")
+def handle_playback_action(data):
+    room_id = data["room_id"]
+    user_id = session.get("user_id")
+    controls = room_controls.get(room_id, {})
+    if user_id == controls.get("host") or user_id in controls.get("granted", set()):
+        socketio.emit("sync_action", data, room=room_id, include_self=False)
+
+@app.route("/room/<room_id>/upload", methods=["POST"])
+@login_required
+def upload_song(room_id):
+    user_id = session.get("user_id")
+    controls = room_controls.get(room_id, {})
+    if user_id != controls.get("host") and user_id not in controls.get("granted", set()):
+        abort(403, "Only host or granted users can upload")
+    
+    file = request.files["file"]
+    if not file:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    filename = secure_filename(file.filename)
+    s3 = r2_client()
+
+    # Generate unique filename to prevent overwrites
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    base, ext = os.path.splitext(filename)
+    unique_filename = f"{base}_{timestamp}{ext}"
+
+    key = f"rooms/{room_id}/tracks/{unique_filename}"
+    s3.upload_fileobj(file, R2_BUCKET, key)
+
+    # Update session playlist
+    session_key = f"music_files_{room_id}"
+    if session_key not in session:
+        session[session_key] = []
+    session[session_key].append(unique_filename)
+    session.modified = True
+
+    # Notify clients in the room
+    socketio.emit("new_song", {"filename": unique_filename}, room=room_id)
+
+    return jsonify({"success": True, "filename": unique_filename})
+
+
         
 @socketio.on('send_sync')
 def handle_send_sync(data):

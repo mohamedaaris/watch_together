@@ -280,6 +280,173 @@
             box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
         }
 
+        /* Upload panel */
+        #upload-container {
+            display: none;
+            /* hidden by default for non-hosts */
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0, 255, 255, 0.08);
+            border: 1px solid cyan;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        #upload-container input[type="file"] {
+            margin-bottom: 8px;
+            color: cyan;
+        }
+
+        #upload-btn {
+            background: cyan;
+            border: none;
+            padding: 8px 14px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+
+        #upload-btn:hover {
+            background: #00e6e6;
+            color: #111;
+        }
+
+        /* Request access button */
+        #request-container {
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        #request-access {
+            background: transparent;
+            border: 1px solid cyan;
+            padding: 8px 14px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            color: cyan;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+
+        #request-access:hover {
+            background: cyan;
+            color: #111;
+        }
+
+        /* Requests panel (for host) */
+        #requests-panel {
+            display: none;
+            /* visible only to host */
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid cyan;
+            border-radius: 10px;
+            background: rgba(0, 255, 255, 0.05);
+        }
+
+        #requests-panel h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: cyan;
+            text-align: center;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Requests list */
+        #requests-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        #requests-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 255, 255, 0.08);
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 6px;
+            font-size: 14px;
+            color: cyan;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Grant & Revoke buttons */
+        #requests-list button {
+            margin-left: 8px;
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+            font-family: 'Orbitron', sans-serif;
+            transition: 0.2s;
+        }
+
+        #requests-list button:first-of-type {
+            background: #00ff99;
+            color: #111;
+        }
+
+        #requests-list button:first-of-type:hover {
+            background: #00cc77;
+        }
+
+        #requests-list button:last-of-type {
+            background: #ff0044;
+            color: #fff;
+        }
+
+        #requests-list button:last-of-type:hover {
+            background: #cc0033;
+        }
+
+        @keyframes glow-grant {
+            0% {
+                box-shadow: 0 0 5px #00ff99;
+            }
+
+            50% {
+                box-shadow: 0 0 15px #00ff99;
+            }
+
+            100% {
+                box-shadow: 0 0 5px #00ff99;
+            }
+        }
+
+        @keyframes glow-revoke {
+            0% {
+                box-shadow: 0 0 5px #ff0044;
+            }
+
+            50% {
+                box-shadow: 0 0 15px #ff0044;
+            }
+
+            100% {
+                box-shadow: 0 0 5px #ff0044;
+            }
+        }
+
+        /* Granted glow effect */
+        #requests-list button.granted,
+        #requests-list li.granted {
+            animation: glow-grant 1.2s infinite;
+            border: 1px solid #00ff99;
+        }
+
+        /* Revoked glow effect */
+        #requests-list button.revoked,
+        #requests-list li.revoked {
+            animation: glow-revoke 1.2s infinite;
+            border: 1px solid #ff0044;
+        }
+
 
         #leaveRoomBtn {
             margin-top: 15px;
@@ -366,6 +533,19 @@
             </div>
             <span id="nowPlaying"></span>
         </div>
+        <div id="upload-container" style="display:none; margin-top:10px;">
+            <input type="file" id="upload-file" accept="audio/*">
+            <button id="upload-btn">Upload Song</button>
+        </div>
+
+        <div id="request-container" style="margin-top:10px;">
+            <button id="request-access">Request Access</button>
+        </div>
+
+        <div id="requests-panel" style="display:none; margin-top:10px;">
+            <h3>Control Requests</h3>
+            <ul id="requests-list"></ul>
+        </div>
 
         <div class="link-box">
             Share this room: <br>
@@ -399,8 +579,61 @@
     <script>
         const socket = io();
         const room = "{{room}}";
+        const roomId = "{{ room }}";
         const username = "{{username}}";
+        const userId = "{{ session['user_id'] }}";
+        const isHost = "{{ session['user_id'] == room.host_id }}";
         socket.emit('join_event', { room: room, username: username });
+
+        if (isHost === "True") {
+            document.getElementById("upload-container").style.display = "block";
+            document.getElementById("requests-panel").style.display = "block";
+        }
+        // Upload handler
+        document.getElementById("upload-btn")?.addEventListener("click", () => {
+            const fileInput = document.getElementById("upload-file");
+            if (!fileInput.files.length) return;
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+            fetch(`/room/${roomId}/upload`, { method: "POST", body: formData })
+                .then(res => res.json())
+                .then(data => console.log("Uploaded", data));
+        });
+        document.getElementById("request-access")?.addEventListener("click", () => {
+            socket.emit("request_control", { room_id: roomId });
+        });
+        socket.on("control_request", (data) => {
+            const li = document.createElement("li");
+            li.textContent = `User ${data.user_id}`;
+            const grantBtn = document.createElement("button");
+            grantBtn.textContent = "Grant";
+            grantBtn.onclick = () => socket.emit("grant_control", { room_id: roomId, user_id: data.user_id });
+            const revokeBtn = document.createElement("button");
+            revokeBtn.textContent = "Revoke";
+            revokeBtn.onclick = () => socket.emit("revoke_control", { room_id: roomId, user_id: data.user_id });
+            li.appendChild(grantBtn);
+            li.appendChild(revokeBtn);
+            document.getElementById("requests-list").appendChild(li);
+        });
+
+        socket.on("control_granted", (data) => {
+            if (data.user_id === userId) {
+                const reqcontainer= document.getElementById("request-container");
+                reqcontainer.innerHTML = "<p>You have control</p>";
+                reqcontainer.classList.add("granted");
+                document.getElementById("upload-container").style.display = "block";
+            }
+        });
+
+        socket.on("control_revoked", (data) => {
+            if (data.user_id === userId) {
+                const reqcontainer= document.getElementById("request-container");
+                reqcontainer.innerHTML = "<p>Control revoked</p>";
+                reqcontainer.classList.remove("granted");
+                reqcontainer.classList.add("revoked");
+                document.getElementById("upload-container").style.display = "none";
+            }
+        });
 
         document.getElementById("leaveRoomBtn").onclick = () => {
             socket.emit('leave_room', { room, username });

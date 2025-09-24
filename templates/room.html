@@ -120,6 +120,11 @@
             margin-top: 20px;
             box-shadow: 0 0 20px #00c9ff;
             background: black;
+            transition: box-shadow 0.3s ease;
+        }
+
+        video:hover {
+            box-shadow: 0 0 30px #00c9ff, 0 0 50px #00c9ff, 0 0 70px #00c9ff;
         }
 
         input[type="text"] {
@@ -136,6 +141,98 @@
 
         button {
             margin-top: 8px;
+        }
+
+        #upload-container {
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #00c9ff;
+            padding: 12px;
+            border-radius: 10px;
+            max-width: 600px;
+            margin: 10px auto;
+            box-shadow: 0 0 15px #00c9ff, 0 0 30px #00c9ff, 0 0 50px #00c9ff;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            animation: glowPulse 2s infinite alternate;
+        }
+
+        /* Upload button glow */
+        #upload-btn {
+            background-color: #00c9ff;
+            color: black;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 0 15px #00c9ff, 0 0 30px #00c9ff, 0 0 50px #00c9ff;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        #upload-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 25px #00ffff, 0 0 50px #00ffff, 0 0 70px #00ffff;
+        }
+
+        /* Access requests panel glow */
+        #requests-panel {
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #00c9ff;
+            padding: 12px;
+            border-radius: 10px;
+            max-width: 600px;
+            margin: 10px auto;
+            box-shadow: 0 0 15px #00c9ff, 0 0 30px #00c9ff, 0 0 50px #00c9ff;
+            animation: glowPulse 2s infinite alternate;
+        }
+
+        /* Request buttons */
+        #requests-list button {
+            background-color: #00c9ff;
+            color: black;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 0 10px #00c9ff, 0 0 20px #00c9ff, 0 0 40px #00c9ff;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        #requests-list button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 60px #00ffff;
+        }
+
+        /* Request control button */
+        #request-access {
+            background-color: #00c9ff;
+            color: black;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            display: block;
+            margin: 10px auto;
+            box-shadow: 0 0 15px #00c9ff, 0 0 30px #00c9ff, 0 0 50px #00c9ff;
+            animation: glowPulse 2s infinite alternate;
+        }
+
+        /* Glow animation */
+        @keyframes glowPulse {
+            0% {
+                box-shadow: 0 0 15px #00c9ff, 0 0 30px #00c9ff, 0 0 50px #00c9ff;
+            }
+
+            50% {
+                box-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 70px #00ffff;
+            }
+
+            100% {
+                box-shadow: 0 0 15px #00c9ff, 0 0 30px #00c9ff, 0 0 50px #00c9ff;
+            }
         }
 
         .copy-button {
@@ -204,6 +301,22 @@
                 flex-direction: column;
                 gap: 5px;
             }
+
+            #upload-container,
+            #requests-panel,
+            #request-access {
+                width: 95%;
+                margin: 8px auto;
+            }
+
+            #requests-list li {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            #requests-list button {
+                margin: 4px 0 0 0;
+            }
         }
     </style>
 </head>
@@ -218,12 +331,25 @@
         {% endif %}
         <div class="welcome-container">
             <h3>Welcome {{username}}!</h3>
-             <button id="leaveRoomBtn">Leave Room</button>
+            <button id="leaveRoomBtn">Leave Room</button>
         </div>
         <video id="videoPlayer" controls>
             <source src="{{ video_url }}" type="video/mp4">
             your browser does not support this video tag.
         </video>
+        <div id="upload-container" style="display:none; margin-top:10px;">
+            <input type="file" id="upload-file" accept="video/mp4">
+            <button id="upload-btn">Upload Video</button>
+        </div>
+
+        <!-- Access requests (host only) -->
+        <div id="requests-panel" style="display:none; margin-top:10px;">
+            <h4>Access Requests</h4>
+            <ul id="requests-list"></ul>
+        </div>
+
+        <!-- Request control button (participants) -->
+        <button id="request-access" style="margin-top:10px;">Request Control</button>
         <div class="link-box">
             Share this room: <br>
             <input type="text" id="room-link" value="{{ request.host_url }}join/{{ room }}" readonly
@@ -246,7 +372,32 @@
         const username = "{{username}}";
         const video = document.getElementById('videoPlayer');
         let isseeking = false;
+        const userId = "{{ session['user_id'] }}";
+        const isHost = "{{ 'true' if is_host else 'false' }}" === "true";
         socket.emit('join_event', { room, username });
+
+        let canControl = isHost;
+        const uploadContainer = document.getElementById("upload-container");
+        const requestsPanel = document.getElementById("requests-panel");
+        const requestAccessBtn = document.getElementById("request-access");
+
+        if (isHost) {
+            uploadContainer.style.display = "block";
+            requestsPanel.style.display = "block";
+            requestAccessBtn.style.display = "none";
+        } else {
+            requestAccessBtn.style.display = "block";
+        }
+        function sendPlaybackAction(action) {
+            if (!canControl) return;
+            socket.emit("playback_action", {
+                room_id: room,
+                action: action,
+                time: video.currentTime,
+                speed: video.playbackRate,
+                username: username
+            });
+        }
         document.getElementById("leaveRoomBtn").onclick = () => {
             socket.emit('leave_room', { room, username });
             window.location.href = '/';
@@ -325,12 +476,62 @@
             chatArea.scrollTop = chatArea.scrollHeight;
         });
 
+        // ---------------- Upload ----------------
+        const uploadBtn = document.getElementById("upload-btn");
+        const uploadFile = document.getElementById("upload-file");
+
+        uploadBtn?.addEventListener("click", () => {
+            if (!canControl) return alert("You cannot upload videos.");
+            if (!uploadFile.files.length) return alert("Select a video first!");
+            const formData = new FormData();
+            formData.append("video", uploadFile.files[0]);
+            fetch(`/room/${room}/upload`, { method: "POST", body: formData })
+                .then(() => alert("Video uploaded!"))
+                .catch(() => alert("Upload failed!"));
+        });
+
+        // ---------------- Access Requests ----------------
+        requestAccessBtn?.addEventListener("click", () => {
+            socket.emit("request_control", { room, user_id: userId, username });
+        });
+
+        // Host receives request
+        socket.on("new_request", data => {
+            if (!isHost) return;
+            const li = document.createElement("li");
+            li.id = `req-${data.user_id}`;
+            li.innerHTML = `${data.username} 
+        <button onclick="grant('${data.user_id}')">Grant</button>
+        <button onclick="revoke('${data.user_id}')">Revoke</button>`;
+            document.getElementById("requests-list").appendChild(li);
+        });
+
+        // Grant/Revoke functions
+        function grant(user_id) { socket.emit("grant_control", { room, user_id }); }
+        function revoke(user_id) { socket.emit("revoke_control", { room, user_id }); }
+
+        // Participant receives grant/revoke updates
+        socket.on("control_granted", data => {
+            if (data.user_id === userId) {
+                canControl = true;
+                uploadContainer.style.display = "block";
+                requestAccessBtn.innerText = "Access Granted";
+            }
+        });
+        socket.on("control_revoked", data => {
+            if (data.user_id === userId) {
+                canControl = false;
+                uploadContainer.style.display = "none";
+                requestAccessBtn.innerText = "Access Revoked";
+            }
+        });
         function copyLink() {
             const link = document.getElementById('room-link');
             link.select();
             document.execCommand('copy');
             alert("link is copied to clipboard!");
         }
+
     </script>
 
 </body>
