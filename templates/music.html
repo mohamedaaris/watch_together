@@ -467,7 +467,6 @@
                 room: room
             });
         });
-
         audio.addEventListener("seeked", () => {
             if (!issync) {
                 socket.emit("seek_event", {

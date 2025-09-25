@@ -609,7 +609,7 @@ def handle_video_event(data):
     state['time'] = time_pos
     state['is_playing'] = action == 'play'
 
-    emit('video_event', {'action': action, 'time': time_pos}, room=room, include_self=False)
+    emit('video_event', {'action': action, 'time': time_pos}, room=room, include_self=True)
     
 @socketio.on('seek_event')
 def handle_seek_event(data):
@@ -619,7 +619,7 @@ def handle_seek_event(data):
     state = get_room_state(room)
     state['time'] = time_pos
     state['is_playing'] = is_playing
-    emit('seek_event', {'time': time_pos, 'isPlaying': is_playing}, room=room)
+    emit('seek_event', {'time': time_pos, 'isPlaying': is_playing}, room=room, include_self=True)
 
 @socketio.on('music_event')
 def handle_music_event(data):
@@ -632,7 +632,7 @@ def handle_music_event(data):
     state['is_playing'] = action == 'play'
     state['track'] = track
 
-    emit('music_event', {'action': action, 'time': time_pos, 'track': track}, room=room, include_self=False)
+    emit('music_event', {'action': action, 'time': time_pos, 'track': track}, room=room, include_self=True)
 
 @socketio.on('track_change')
 def handle_track_change(data):
