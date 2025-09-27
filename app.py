@@ -127,6 +127,7 @@ class RoomQueue(db.Model):
     name = db.Column(db.String(250), unique=True, nullable=False)
     host_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     room_type = db.Column(db.String(20), nullable=False)
+    file_name = db.Column(db.String(255), nullable=True)
     size_bytes = db.Column(db.BigInteger, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     status = db.Column(db.String(20), default='queued') 
@@ -603,7 +604,6 @@ def on_connect():
     if 'user_id' in session:
         join_room(f"user_{session['user_id']}")
         
-        
 @socketio.on('leave_room')
 def handle_leave_room(data):
     room=data['room']
@@ -617,6 +617,9 @@ def handle_leave_room(data):
         user = User.query.filter_by(name=username).first()
         if user:
             RoomMember.query.filter_by(room_id=room_obj.id, user_id=user.id).delete()
+            access_request = RoomAccessRequest.query.filter_by(room_id=room_obj.id, user_id=user.id).first()
+            if access_request:
+                access_request.status = "left"
         room_obj.members = RoomMember.query.filter_by(room_id=room_obj.id).count()
         db.session.commit()
         

@@ -574,7 +574,8 @@
                 socket.emit("seek_event", {
                     time: audio.currentTime,
                     room: room,
-                    isPlaying: !audio.paused
+                    isPlaying: !audio.paused,
+                    sender: username
                 });
             }
         });
@@ -629,6 +630,8 @@
         });
 
         socket.on("seek_event", (data) => {
+            if (data.sender === username) return;
+
             if (Math.abs(audio.currentTime - data.time) > 0.1) {
                 issync = true;
                 audio.currentTime = data.time;

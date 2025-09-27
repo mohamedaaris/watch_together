@@ -339,7 +339,6 @@
         const username = "{{username}}";
         let isHost = "{{ is_host }}" === "True";
         const video = document.getElementById('videoPlayer');
-        let isseeking = false;
         socket.emit('join_event', { room, username });
         document.getElementById("leaveRoomBtn").onclick = () => {
             socket.emit('leave_room', { room, username });
@@ -348,9 +347,8 @@
 
         let issync = false;
         video.addEventListener('seeking', () => {
-            if(isHost) {
-            isseeking = true;
-            socket.emit('seek_event', { time: video.currentTime, isPlaying: !video.paused, room });
+            if(!issync && isHost) {
+            socket.emit('seek_event', { time: video.currentTime, room: room, isPlaying: !video.paused, sender: username });
             }
         });
         video.addEventListener('play', () => {
@@ -372,17 +370,21 @@
         }
         });
         socket.on('seek_event', data => {
-            issync = true;
+            if (data.sender === username) return;
             if (Math.abs(video.currentTime - data.time) > 0.5) {
+                issync=true;
                 video.currentTime = data.time;
+                setTimeout(() => { issync = false; }, 200);
             }
             if (data.isPlaying && video.paused) {
+                issync=true;
                 video.play().catch(e => console.warn("Autoplay blocked on seek:", e));
+                setTimeout(() => { issync = false; }, 200);
             } else if (!data.isPlaying && !video.paused) {
+                issync=true;
                 video.pause();
+                setTimeout(() => { issync = false; }, 200);
             }
-
-            setTimeout(() => { issync = false; }, 200);
         });
 
         socket.on('video_event', data => {
