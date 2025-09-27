@@ -517,7 +517,20 @@ def handle_grant_control(data):
         db.session.commit()
 
     emit('control_granted', room=f"user_{user_id}")
-        
+
+@socketio.on("revoke_control")
+def handle_revoke_control(data):
+    room = data["room"]
+    user_id = data["user_id"]
+    user = User.query.get(user_id)
+    if not user:
+        return
+    username = user.name
+    emit("control_revoked", {"username": username}, room=f"user_{user.id}")
+    emit("chat_message", {
+        "username": "System",
+        "message": f"Host has revoked control from {username}."
+    }, room=room)
 
 @app.route('/room/<room>/<encrypted_username>')
 @login_required

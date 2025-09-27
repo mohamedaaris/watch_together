@@ -174,6 +174,40 @@
             box-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
         }
 
+        .revoke-btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-left: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            box-shadow: 0 0 8px rgba(231, 76, 60, 0.6);
+        }
+
+        .revoke-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .revoke-btn:active {
+            transform: scale(0.96);
+        }
+
+        .granted-user {
+            margin: 6px 0;
+            padding: 8px 12px;
+            background: #111;
+            color: #00c9ff;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 0 8px #00c9ff;
+            font-family: 'Orbitron', sans-serif;
+        }
+
         .chat-box,
         #chatArea,
         .message {
@@ -315,6 +349,10 @@
             <h4>Pending Control Requests</h4>
             <ul id="pendingRequests" style="list-style:none; padding:0;"></ul>
         </div>
+        <div class="granted-users-section">
+            <h4>Granted Users</h4>
+            <div id="grantedUsersList"></div>
+        </div>
         {% endif %}
 
         <div class="link-box">
@@ -431,6 +469,34 @@
             document.execCommand('copy');
             alert("link is copied to clipboard!");
         }
+
+        function addGrantedUser(userId, uname) {
+            const container = document.getElementById("grantedUsersList");
+            const div = document.createElement("div");
+            div.classList.add("granted-user");
+            div.id = `granted-${userId}`;
+            div.textContent = uname;
+
+            const revokeBtn = document.createElement("button");
+            revokeBtn.textContent = "Revoke";
+            revokeBtn.classList.add("revoke-btn");
+            revokeBtn.onclick = () => {
+                socket.emit("revoke_control", { room, user_id: userId, username: uname });
+                div.remove();
+            };
+            div.appendChild(revokeBtn);
+            container.appendChild(div);
+        }
+
+        socket.on("control_revoked", data => {
+            if (data.username === username) {
+                alert("Your control has been revoked by the host.");
+                isHost = false;
+                document.querySelector(".host-access-requests")?.remove();
+                document.querySelector(".granted-users-section")?.remove();
+            }
+        });
+
         if (!isHost) {
                 const requestBtn = document.getElementById("requestControlBtn");
                 const statusText = document.getElementById("requestStatus");
