@@ -93,6 +93,86 @@
             transform: scale(1.05);
             box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
         }
+        
+        .access-request-section {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00c9ff;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: center;
+            box-shadow: 0 0 15px #00c9ff;
+        }
+
+        #requestControlBtn {
+            background-color: #00c9ff;
+            color: black;
+            font-weight: bold;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 0 10px #00c9ff, 0 0 20px #00c9ff;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        #requestControlBtn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
+        }
+
+        #requestStatus {
+            margin-top: 10px;
+            color: #00ffcc;
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+
+        /* Pending Requests Section (Host) */
+        .host-access-requests {
+            background: rgba(0, 0, 0, 0.85);
+            border: 2px solid #00c9ff;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+            box-shadow: 0 0 15px #00c9ff;
+        }
+
+        .host-access-requests h4 {
+            color: #00c9ff;
+            margin-bottom: 10px;
+        }
+
+        #pendingRequests li {
+            list-style: none;
+            margin: 6px 0;
+            padding: 8px 12px;
+            background: #111;
+            color: #00c9ff;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 0 8px #00c9ff;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        #pendingRequests button {
+            background-color: #00c9ff;
+            color: black;
+            border: none;
+            border-radius: 6px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        #pendingRequests button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
+        }
 
         .chat-box,
         #chatArea,
@@ -218,12 +298,25 @@
         {% endif %}
         <div class="welcome-container">
             <h3>Welcome {{username}}!</h3>
-             <button id="leaveRoomBtn">Leave Room</button>
+            <button id="leaveRoomBtn">Leave Room</button>
         </div>
-        <video id="videoPlayer" controls>
+        <video id="videoPlayer" controls=false>
             <source src="{{ video_url }}" type="video/mp4">
             your browser does not support this video tag.
         </video>
+
+        {% if not is_host %}
+        <div class="access-request-section">
+            <button id="requestControlBtn">Request Control</button>
+            <p id="requestStatus" style="color:#00ffcc;"></p>
+        </div>
+        {% else %}
+        <div class="host-access-requests">
+            <h4>Pending Control Requests</h4>
+            <ul id="pendingRequests" style="list-style:none; padding:0;"></ul>
+        </div>
+        {% endif %}
+
         <div class="link-box">
             Share this room: <br>
             <input type="text" id="room-link" value="{{ request.host_url }}join/{{ room }}" readonly
@@ -244,6 +337,7 @@
         const socket = io();
         const room = "{{room}}";
         const username = "{{username}}";
+        let isHost = "{{ is_host }}" === "True";
         const video = document.getElementById('videoPlayer');
         let isseeking = false;
         socket.emit('join_event', { room, username });
@@ -254,24 +348,28 @@
 
         let issync = false;
         video.addEventListener('seeking', () => {
+            if(isHost) {
             isseeking = true;
             socket.emit('seek_event', { time: video.currentTime, isPlaying: !video.paused, room });
+            }
         });
         video.addEventListener('play', () => {
-            if (!issync) {
+            if (!issync && isHost) {
                 socket.emit('video_event', { action: "play", time: video.currentTime, room });
             }
         });
         video.addEventListener('pause', () => {
-            if (!issync) {
+            if (!issync && isHost) {
                 socket.emit('video_event', { action: "pause", time: video.currentTime, room });
             }
         });
         video.addEventListener('ratechange', () => {
+            if(isHost) {
             socket.emit('speed_event', {
                 speed: video.playbackRate,
                 room: room
             });
+        }
         });
         socket.on('seek_event', data => {
             issync = true;
@@ -331,6 +429,43 @@
             document.execCommand('copy');
             alert("link is copied to clipboard!");
         }
+        if (!isHost) {
+                const requestBtn = document.getElementById("requestControlBtn");
+                const statusText = document.getElementById("requestStatus");
+
+                requestBtn.onclick = () => {
+                    socket.emit("request_control", { room });
+                    statusText.textContent = "Request sent. Waiting for host approval...";
+                    requestBtn.disabled = true;
+                };
+
+                socket.on("control_granted", () => {
+                    statusText.textContent = "You have been granted control!";
+                    isHost = true;
+                    document.querySelector(".access-request-section").style.display = "none";
+                    document.querySelector(".host-access-requests").style.display = "block";
+                    video.controls=true;
+                });
+            } else {
+                const pendingList = document.getElementById("pendingRequests");
+
+                socket.on("control_request_received", data => {
+                    const li = document.createElement("li");
+                    li.id = `req-${data.user_id}`;
+                    li.textContent = `${data.username} requests control `;
+
+                    const approveBtn = document.createElement("button");
+                    approveBtn.textContent = "Approve";
+                    approveBtn.style.marginLeft = "10px";
+                    approveBtn.onclick = () => {
+                        socket.emit("grant_control", { room, user_id: data.user_id });
+                        li.remove();
+                    };
+
+                    li.appendChild(approveBtn);
+                    pendingList.appendChild(li);
+                });
+            }
     </script>
 
 </body>

@@ -138,6 +138,16 @@ class RoomMember(db.Model):
     joined_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     room = db.relationship("Room", back_populates="memberships")
     user = db.relationship("User", backref="rooms")
+    
+class RoomAccessRequest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    room_id = db.Column(db.Integer, db.ForeignKey("room.id", ondelete="CASCADE"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    status = db.Column(db.String(20), default="pending")  # pending, approved, denied
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    room = db.relationship("Room", backref="access_requests")
+    user = db.relationship("User", backref="access_requests")
       
 class loginform(FlaskForm):
     email=StringField('Email', validators=[DataRequired(),Email()])
@@ -458,6 +468,44 @@ def join_room_by_link(room):
     
     flash("Invalid room type", "error")
     return redirect(url_for('home'))
+
+@socketio.on('request_control')
+def handle_request_control(data):
+    room_name = data['room']
+    user = User.query.get(session['user_id'])
+    room_obj = Room.query.filter_by(name=room_name).first()
+    if not room_obj or not user:
+        return
+    existing = RoomAccessRequest.query.filter_by(room_id=room_obj.id, user_id=user.id).first()
+    if not existing:
+        req = RoomAccessRequest(room_id=room_obj.id, user_id=user.id)
+        db.session.add(req)
+        db.session.commit()
+
+    # Notify host
+    host_user = User.query.get(room_obj.host_id)
+    if host_user:
+        emit("control_request_received", {
+            "username": user.name,
+            "user_id": user.id,
+            "room": room_name
+        }, room=f"user_{host_user.id}")
+        
+@socketio.on('grant_control')
+def handle_grant_control(data):
+    room_name = data['room']
+    user_id = data['user_id'] 
+    room_obj = Room.query.filter_by(name=room_name).first()
+    host_user = User.query.get(session['user_id'])
+
+    if not room_obj or not host_user or room_obj.host_id != host_user.id:
+        return
+    req = RoomAccessRequest.query.filter_by(room_id=room_obj.id, user_id=user_id).first()
+    if req:
+        req.status = "approved"
+        db.session.commit()
+
+    emit('control_granted', room=f"user_{user_id}")
         
 
 @app.route('/room/<room>/<encrypted_username>')
@@ -550,6 +598,12 @@ def handle_join_room(data):
         if host_name and host_name in room_users[room]:
             emit('request_sync', {'target': username}, room=room, include_self=False)
     
+@socketio.on('connect')
+def on_connect():
+    if 'user_id' in session:
+        join_room(f"user_{session['user_id']}")
+        
+        
 @socketio.on('leave_room')
 def handle_leave_room(data):
     room=data['room']
@@ -588,79 +642,58 @@ def handle_send_sync(data):
     room = data['room']
     time_pos = data['time']
     is_playing = data['isPlaying']
-    
+   
     payload = {
         'time': time_pos,
         'isPlaying': is_playing
     }
     if "speed" in data:
         payload['speed']=data['speed']
-        
+       
     if 'track' in data:
         payload['track']=data['track']
     emit('sync_playback', payload, room=target)
-    
+   
 @socketio.on('video_event')
 def handle_video_event(data):
-    room = data['room']
-    action = data['action']
-    time_pos = data.get('time', 0)
-    state = get_room_state(room)
-    state['time'] = time_pos
-    state['is_playing'] = action == 'play'
-
-    emit('video_event', {'action': action, 'time': time_pos}, room=room, include_self=True)
-    
+    emit('video_event',{
+        'action': data['action'],
+        'time': data['time']
+    }, room=data['room'])
+   
 @socketio.on('seek_event')
 def handle_seek_event(data):
-    room = data['room']
-    time_pos = data['time']
-    is_playing = data['isPlaying']
-    state = get_room_state(room)
-    state['time'] = time_pos
-    state['is_playing'] = is_playing
-    emit('seek_event', {'time': time_pos, 'isPlaying': is_playing}, room=room, include_self=True)
-
+    emit('seek_event', {
+        'time': data['time'],
+        'isPlaying': data['isPlaying']
+    }, room=data['room'], include_self=False)
+   
 @socketio.on('music_event')
 def handle_music_event(data):
-    room = data['room']
-    action = data['action']
-    time_pos = data['time']
-    track = data['track']
-    state = get_room_state(room)
-    state['time'] = time_pos
-    state['is_playing'] = action == 'play'
-    state['track'] = track
-
-    emit('music_event', {'action': action, 'time': time_pos, 'track': track}, room=room, include_self=True)
+    emit('music_event',{
+        'action': data['action'],
+        'time': data['time'],
+        'track':data["track"]
+    }, room=data['room'],include_self=False)
 
 @socketio.on('track_change')
 def handle_track_change(data):
-    room = data['room']
-    track = data['track']
-    state = get_room_state(room)
-    state['track'] = track
-    state['time'] = 0
-    state['is_playing'] = False
-
-    emit('track_change', {'track': track}, room=room)
+    emit('track_change', {
+        'track': data['track']
+    }, room=data['room'])
 
 
 @socketio.on('music_speed')
 def handle_music_speed(data):
-    room = data['room']
-    speed = data['speed']
-    state = get_room_state(room)
-    state['speed'] = speed
-    emit('music_speed', {'speed': speed}, room=room)
-    
+    emit('music_speed', {
+        'speed': data['speed']
+    }, room=data['room'])
+   
 @socketio.on('speed_event')
 def handle_speed_event(data):
-    room = data['room']
-    speed = data['speed']
-    state = get_room_state(room)
-    state['speed'] = speed
-    emit('speed_event', {'speed': speed}, room=room)
+    emit('speed_event', {
+        'speed': data['speed']
+    }, room=data['room'])
   
 @socketio.on('chat_message')
 def handle_chat_message(data):
