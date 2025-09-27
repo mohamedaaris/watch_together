@@ -118,6 +118,12 @@ class Room(db.Model):
         cascade="all, delete-orphan",
         passive_deletes=True
     )
+    access_requests = db.relationship(
+        "RoomAccessRequest",
+        back_populates="room",
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )
     @property
     def members_count(self):
         return RoomMember.query.filter_by(room_id=self.id).count()
@@ -261,8 +267,12 @@ def api_rooms():
 @admin_required
 def delete_room(room_id):
     room=Room.query.get_or_404(room_id)
-    db.session.delete(room)
-    db.session.commit()
+    try:
+        db.session.delete(room)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error deleting room: {str(e)}", "danger")
     return redirect(url_for("room_list"))
 
 @app.route('/home')
