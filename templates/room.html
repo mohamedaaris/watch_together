@@ -528,6 +528,7 @@
                     approveBtn.onclick = () => {
                         socket.emit("grant_control", { room, user_id: data.user_id });
                         li.remove();
+                        addGrantedUser(data.user_id, data.username);
                     };
 
                     li.appendChild(approveBtn);
