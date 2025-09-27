@@ -153,7 +153,7 @@ class RoomAccessRequest(db.Model):
     status = db.Column(db.String(20), default="pending")  # pending, approved, denied
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
-    room = db.relationship("Room", backref="access_requests")
+    room = db.relationship("Room", back_populates="access_requests")
     user = db.relationship("User", backref="access_requests")
       
 class loginform(FlaskForm):
