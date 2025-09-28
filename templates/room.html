@@ -338,6 +338,81 @@
             white-space: normal;
         }
 
+        .chat-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #00c9ff;
+            color: black;
+            border: none;
+            border-radius: 50%;
+            width: 55px;
+            height: 55px;
+            font-size: 22px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            z-index: 1100;
+            transition: transform 0.2s ease;
+        }
+
+        .chat-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        /* Sliding chat panel */
+        .chat-panel {
+            position: fixed;
+            right: 0;
+            top: 0;
+            height: 100%;
+            width: 320px;
+            background: rgba(0, 0, 0, 0.95);
+            border-left: 1px solid #00c9ff;
+            box-shadow: -2px 0 12px rgba(0, 0, 0, 0.6);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            z-index: 1050;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+        }
+
+        .chat-panel.active {
+            transform: translateX(0);
+        }
+
+        .chat-panel .chat-box {
+            background: transparent;
+            box-shadow: none;
+            border: none;
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Notification badge on chat button */
+        .chat-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: red;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 50%;
+            padding: 3px 6px;
+            display: none;
+            /* hidden by default */
+        }
+
+        #typingIndicator {
+            color: #00ffcc;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
 
 
         /* 🌐 Mobile responsive layout */
@@ -355,6 +430,10 @@
 
             #chatInput {
                 font-size: 0.9rem;
+            }
+
+            .chat-panel {
+                width: 90%;
             }
 
             #sendBtn {
@@ -418,11 +497,17 @@
         <div id="notification"></div>
         <audio id="chatSound" src="{{ url_for('static', filename='uploads/sound.mp3') }}" preload="auto"></audio>
         <div id="chatNotificationContainer"></div>
-        <div class="chat-box">
-            <div id="chatArea"></div>
-            <div class="chat-input-area">
-                <input type="text" id="chatInput" placeholder="Type a message...">
-                <button id="sendBtn">Send</button>
+        <button id="chatToggleBtn" class="chat-toggle">💬
+            <span id="chatBadge" class="chat-badge"></span>
+        </button>
+        <div id="chatPanel" class="chat-panel">
+            <div class="chat-box">
+                <div id="chatArea"></div>
+                <div id="typingIndicator" style="color:#00ffcc; font-size:12px; margin-bottom:4px;"></div>
+                <div class="chat-input-area">
+                    <input type="text" id="chatInput" placeholder="Type a message...">
+                    <button id="sendBtn">Send</button>
+                </div>
             </div>
         </div>
     </div>
@@ -450,13 +535,16 @@
         }
 
         let issync = false;
+        let preventPlay = e => e.preventDefault();
+        let preventPause = e => e.preventDefault();
+        let preventSeek = e => e.preventDefault();
+        let preventRateChange = e => e.preventDefault();
         if (!isHost) {
             video.controls = false;
-
-            video.addEventListener('play', e => e.preventDefault());
-            video.addEventListener('pause', e => e.preventDefault());
-            video.addEventListener('seeking', e => e.preventDefault());
-            video.addEventListener('ratechange', e => e.preventDefault());
+            video.addEventListener('play', preventPlay);
+            video.addEventListener('pause', preventPause);
+            video.addEventListener('seeking', preventSeek);
+            video.addEventListener('ratechange', preventRateChange);
         }
 
         video.addEventListener('seeking', () => {
@@ -540,8 +628,20 @@
         const chatArea = document.getElementById("chatArea");
         const chatInput = document.getElementById("chatInput");
         const sendBtn = document.getElementById("sendBtn");
+        const chatToggleBtn = document.getElementById("chatToggleBtn");
+        const chatPanel = document.getElementById("chatPanel");
+        const typingIndicator = document.getElementById("typingIndicator");
+        let typingTimeout;
         const currentUserID = "{{session['user_id']}}";
 
+
+        chatInput.addEventListener("input", () => {
+            socket.emit("typing", { room, username });
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                socket.emit("stop_typing", { room, username });
+            }, 1000);
+        });
         function sendmessage() {
             const msg = chatInput.value.trim();
             if (msg) {
@@ -555,14 +655,45 @@
         })
         socket.on("chat_message", data => {
             const div = document.createElement('div');
-            div.classList.add('message');
+            div.classList.add('message', data.username === username ? 'self' : 'other');
+            const avatar = `<span style="display:inline-block;width:24px;height:24px;
+        background:#00c9ff;color:black;border-radius:50%;text-align:center;
+        font-size:14px;line-height:24px;margin-right:6px;">${data.username[0].toUpperCase()}</span>`;
+
+            // Parse URLs into clickable links
+            const messageText = data.message.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#0ff;">$1</a>');
             const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-            div.innerHTML = `<strong>${data.username}</strong><br>${data.message}<br><small>${time}</small>`;
-            div.classList.add(data.username === username ? 'self' : 'other');
+            div.innerHTML = `${avatar}<strong>${data.username}</strong><br>${messageText}<br><small>${time}</small>`;
             chatArea.appendChild(div);
             chatArea.scrollTop = chatArea.scrollHeight;
             if (data.username !== username) {
                 showChatNotification(data.message, data.username);
+                if (!chatPanel.classList.contains("active")) {
+                    const badge = document.getElementById("chatBadge");
+                    badge.style.display = "inline-block";
+                    badge.textContent = parseInt(badge.textContent || "0") + 1;
+                }
+                if (document.hidden && Notification.permission === "granted") {
+                    new Notification(`${data.username}`, { body: data.message, icon: '/static/images/logo.png' });
+                }
+            }
+        });
+        socket.on("typing", data => {
+            typingIndicator.textContent = `${data.username} is typing...`;
+        });
+        socket.on("stop_typing", () => {
+            typingIndicator.textContent = "";
+        });
+        if (Notification.permission !== "granted") {
+            Notification.requestPermission();
+        }
+        chatToggleBtn.addEventListener("click", () => {
+            chatPanel.classList.toggle("active");
+
+            if (chatPanel.classList.contains("active")) {
+                const badge = document.getElementById("chatBadge");
+                badge.style.display = "none";
+                badge.textContent = "";
             }
         });
 
@@ -593,7 +724,6 @@
 
         socket.on("control_revoked", data => {
             if (data.user_id === parseInt(currentUserID)) {
-                showNotification("Your control has been revoked by the host.");
                 isHost = false;
                 document.querySelector(".host-access-requests")?.remove();
                 document.querySelector(".granted-users-section")?.remove();
@@ -625,6 +755,10 @@
                 document.querySelector(".access-request-section").style.display = "none";
                 document.querySelector(".host-access-requests").style.display = "block";
                 video.controls = true;
+                video.removeEventListener('play', preventPlay);
+                video.removeEventListener('pause', preventPause);
+                video.removeEventListener('seeking', preventSeek);
+                video.removeEventListener('ratechange', preventRateChange);
             });
         } else {
             const pendingList = document.getElementById("pendingRequests");

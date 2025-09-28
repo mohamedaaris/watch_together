@@ -536,6 +536,18 @@ def handle_revoke_control(data):
         "message": f"Host has revoked control from {username}."
     }, room=room)
 
+@socketio.on('typing')
+def typing(data):
+    room = data['room']
+    username = data['username']
+    emit('typing', {'username': username}, to=room, include_self=False)
+
+@socketio.on('stop_typing')
+def stop_typing(data):
+    room = data['room']
+    emit('stop_typing', {}, to=room, include_self=False)
+
+
 @app.route('/room/<room>/<encrypted_username>')
 @login_required
 def room(room,encrypted_username):
