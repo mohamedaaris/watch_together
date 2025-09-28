@@ -441,6 +441,7 @@
         const chatArea = document.getElementById("chatArea");
         const chatInput = document.getElementById("chatInput");
         const sendBtn = document.getElementById("sendBtn");
+        const currentUserID = "{{session['user_id']}}";
 
         function sendmessage() {
             const msg = chatInput.value.trim();
@@ -489,11 +490,19 @@
         }
 
         socket.on("control_revoked", data => {
-            if (data.username === username) {
+            if (data.user_id === parseInt(currentUserID)) {
                 alert("Your control has been revoked by the host.");
                 isHost = false;
                 document.querySelector(".host-access-requests")?.remove();
                 document.querySelector(".granted-users-section")?.remove();
+                const requestSection = document.querySelector(".access-request-section");
+                if (requestSection) {
+                    requestSection.style.display = "block";
+                    const requestBtn = document.getElementById("requestControlBtn");
+                    const statusText = document.getElementById("requestStatus");
+                    requestBtn.disabled = false;
+                    statusText.textContent = "";
+                }
             }
         });
 

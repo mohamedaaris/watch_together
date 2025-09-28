@@ -695,7 +695,7 @@
         const chatArea = document.getElementById("chatArea");
         const chatInput = document.getElementById("chatInput");
         const sendBtn = document.getElementById("sendBtn");
-
+        const currentUserID = "{{session['user_id']}}";
         function sendmessage() {
             const msg = chatInput.value.trim();
             if (msg) {
@@ -743,7 +743,7 @@
 
         // revoke effect for revoked user
         socket.on("control_revoked", data => {
-            if (data.user_id === userId) {
+            if (data.user_id === parseInt(currentUserID)) {
                 alert("Your control has been revoked by the host.");
                 isHost = false;
                 document.querySelector(".host-access-requests")?.remove();
