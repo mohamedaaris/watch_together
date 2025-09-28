@@ -112,14 +112,24 @@
         #audio-player-wrap #nowPlaying {
             display: block;
             margin-top: 8px;
-            color: cyan;
-            font-weight: bold;
-            font-size: 1rem;
+            color: #00c9ff;
+            font-weight: 600;
+            font-size: 1.1rem;
             max-width: 95%;
             overflow: hidden;
             white-space: nowrap;
             text-overflow: ellipsis;
             text-align: center;
+            cursor: default;
+            text-shadow: 0 0 6px rgba(0, 201, 255, 0.6);
+            transition: transform 0.2s ease, color 0.2s ease;
+        }
+
+        #audio-player-wrap #nowPlaying:hover {
+            transform: scale(1.03);
+            /* subtle zoom */
+            color: #33d6ff;
+            /* slightly lighter cyan */
         }
 
         .access-request-section {
@@ -460,7 +470,7 @@
             font-size: 22px;
             cursor: pointer;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-            z-index: 1100;
+            z-index: 1200;
             transition: transform 0.2s ease;
         }
 
@@ -497,9 +507,10 @@
             height: 100%;
             width: 100%;
             margin: 0;
+            flex: 1;
             display: flex;
             flex-direction: column;
-            padding-bottom: 70px;
+            padding-bottom: 10px;
         }
 
         /* Notification badge on chat button */
@@ -586,7 +597,7 @@
             }
 
             #nowPlaying {
-                font-size: 0.85rem;
+                font-size: 0.9rem;
             }
         }
     </style>
