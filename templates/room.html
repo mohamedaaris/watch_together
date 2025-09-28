@@ -451,8 +451,7 @@
 
         let issync = false;
         video.addEventListener('seeking', () => {
-            if (!isHost && !issync) {
-                video.currentTime = video.currentTime;
+            if (!isHost) {
                 showNotification("Only the host can seek");
             }
             if (!issync && isHost) {
@@ -460,8 +459,7 @@
             }
         });
         video.addEventListener('play', () => {
-            if (!isHost && !issync) {
-                video.pause();
+            if (!isHost) {
                 showNotification("Only the host can play");
             }
             if (!issync && isHost) {
@@ -469,8 +467,7 @@
             }
         });
         video.addEventListener('pause', () => {
-            if (!isHost && !issync) {
-                video.play().catch(e => { });
+            if (!isHost) {
                 showNotification("Only the host can pause");
             }
             if (!issync && isHost) {
@@ -478,8 +475,7 @@
             }
         });
         video.addEventListener('ratechange', () => {
-            if (!isHost && !issync) {
-                video.playbackRate = 1;
+            if (!isHost) {
                 showNotification("Only the host can change speed.");
             }
             if (isHost) {

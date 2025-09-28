@@ -657,8 +657,7 @@
 
 
         audio.addEventListener('play', () => {
-            if (!isHost && !issync) {
-                audio.pause();
+            if (!isHost) {
                 showNotification("Only the host can play");
             }
             if (!issync && isHost) {
@@ -666,8 +665,7 @@
             }
         });
         audio.addEventListener('pause', () => {
-            if (!isHost && !issync) {
-                audio.play().catch(e => { });
+            if (!isHost) {
                 showNotification("Only the host can pause");
             }
             if (!issync && isHost) {
@@ -681,8 +679,7 @@
             }
         })
         audio.addEventListener('ratechange', () => {
-            if (!isHost && !issync) {
-                audio.playbackRate = 1;
+            if (!isHost) {
                 showNotification("Only the host can change speed.");
             }
             if (isHost) {
@@ -693,8 +690,7 @@
             }
         });
         audio.addEventListener("seeked", () => {
-            if (!isHost && !issync) {
-                audio.currentTime = audio.currentTime;
+            if (!isHost) {
                 showNotification("Only the host can seek");
             }
             if (!issync && isHost) {
