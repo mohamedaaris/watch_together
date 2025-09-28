@@ -109,12 +109,17 @@
             transform: scale(0.96);
         }
 
-        #nowPlaying {
+        #audio-player-wrap #nowPlaying {
             display: block;
             margin-top: 8px;
             color: cyan;
             font-weight: bold;
-            font-size: 1.1rem;
+            font-size: 1rem;
+            max-width: 95%;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            text-align: center;
         }
 
         .access-request-section {
@@ -414,13 +419,13 @@
         #chatNotificationContainer {
             position: fixed;
             top: 20px;
-            right: 20px;
+            right: 10px;
             z-index: 9999;
             display: flex;
             flex-direction: column;
             gap: 10px;
-            /* space between multiple notifications */
             pointer-events: none;
+            max-width: 95%;
         }
 
         /* Individual notification toast */
@@ -436,11 +441,10 @@
             transform: translateY(-20px);
             pointer-events: auto;
             transition: all 0.5s ease;
-            max-width: 250px;
+            max-width: 90%;
             word-wrap: break-word;
+            white-space: normal;
         }
-
-
 
         #leaveRoomBtn {
             margin-top: 15px;
@@ -490,6 +494,15 @@
 
             .playlist {
                 max-height: 160px;
+            }
+
+            .chat-notification {
+                font-size: 12px;
+                padding: 8px 12px;
+            }
+
+            #nowPlaying {
+                font-size: 0.85rem;
             }
         }
     </style>
@@ -643,19 +656,18 @@
         }
 
 
-        audio.addEventListener('play', (e) => {
-            if (!isHost) {
-                e.preventDefault();
-                audio.currentTime = audio.currentTime;
+        audio.addEventListener('play', () => {
+            if (!isHost && !issync) {
+                audio.pause();
                 showNotification("Only the host can play");
             }
             if (!issync && isHost) {
                 socket.emit('music_event', { action: "play", time: audio.currentTime, room, track: currentTrack });
             }
         });
-        audio.addEventListener('pause', (e) => {
-            if (!isHost) {
-                e.preventDefault();
+        audio.addEventListener('pause', () => {
+            if (!isHost && !issync) {
+                audio.play().catch(e => { });
                 showNotification("Only the host can pause");
             }
             if (!issync && isHost) {
@@ -669,7 +681,7 @@
             }
         })
         audio.addEventListener('ratechange', () => {
-            if (!isHost) {
+            if (!isHost && !issync) {
                 audio.playbackRate = 1;
                 showNotification("Only the host can change speed.");
             }
@@ -680,9 +692,8 @@
                 });
             }
         });
-        audio.addEventListener("seeked", (e) => {
-            if (!isHost) {
-                e.preventDefault();
+        audio.addEventListener("seeked", () => {
+            if (!isHost && !issync) {
                 audio.currentTime = audio.currentTime;
                 showNotification("Only the host can seek");
             }

@@ -300,19 +300,24 @@
             border-radius: 6px;
             box-shadow: 0 0 10px #00c9ff;
             font-family: 'Orbitron', sans-serif;
-            display: none;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
             z-index: 9999;
+            max-width: 90%;
+            word-wrap: break-word;
         }
-         #chatNotificationContainer {
+
+        #chatNotificationContainer {
             position: fixed;
             top: 20px;
-            right: 20px;
+            right: 10px;
             z-index: 9999;
             display: flex;
             flex-direction: column;
             gap: 10px;
-            /* space between multiple notifications */
             pointer-events: none;
+            max-width: 95%;
         }
 
         /* Individual notification toast */
@@ -328,8 +333,9 @@
             transform: translateY(-20px);
             pointer-events: auto;
             transition: all 0.5s ease;
-            max-width: 250px;
+            max-width: 90%;
             word-wrap: break-word;
+            white-space: normal;
         }
 
 
@@ -359,6 +365,11 @@
             .chat-input-area {
                 flex-direction: column;
                 gap: 5px;
+            }
+
+            .chat-notification {
+                font-size: 12px;
+                padding: 8px 12px;
             }
         }
     </style>
@@ -430,16 +441,17 @@
         function showNotification(message, duration = 2000) {
             const notif = document.getElementById("notification");
             notif.textContent = message;
-            notif.style.display = "block";
+            notif.style.opacity = 1;
+            notif.style.transform = "translateY(0)";
             setTimeout(() => {
-                notif.style.display = "none";
+                notif.style.opacity = 0;
+                notif.style.transform = "translateY(-20px)";
             }, duration);
         }
 
         let issync = false;
-        video.addEventListener('seeking', (e) => {
-            if (!isHost) {
-                e.preventDefault();
+        video.addEventListener('seeking', () => {
+            if (!isHost && !issync) {
                 video.currentTime = video.currentTime;
                 showNotification("Only the host can seek");
             }
@@ -448,9 +460,8 @@
             }
         });
         video.addEventListener('play', () => {
-            if (!isHost) {
-                e.preventDefault();
-                video.currentTime = video.currentTime;
+            if (!isHost && !issync) {
+                video.pause();
                 showNotification("Only the host can play");
             }
             if (!issync && isHost) {
@@ -458,8 +469,8 @@
             }
         });
         video.addEventListener('pause', () => {
-            if (!isHost) {
-                e.preventDefault();
+            if (!isHost && !issync) {
+                video.play().catch(e => { });
                 showNotification("Only the host can pause");
             }
             if (!issync && isHost) {
@@ -467,7 +478,7 @@
             }
         });
         video.addEventListener('ratechange', () => {
-            if(!isHost) {
+            if (!isHost && !issync) {
                 video.playbackRate = 1;
                 showNotification("Only the host can change speed.");
             }
