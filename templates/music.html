@@ -396,6 +396,51 @@
             box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
         }
 
+        #notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #00c9ff;
+            color: black;
+            padding: 10px 15px;
+            border-radius: 6px;
+            box-shadow: 0 0 10px #00c9ff;
+            font-family: 'Orbitron', sans-serif;
+            display: none;
+            z-index: 9999;
+        }
+
+        /* Chat notification container */
+        #chatNotificationContainer {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            /* space between multiple notifications */
+            pointer-events: none;
+        }
+
+        /* Individual notification toast */
+        .chat-notification {
+            background: rgba(0, 0, 0, 0.9);
+            color: #00ffcc;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 12px #00ffff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            opacity: 0;
+            transform: translateY(-20px);
+            pointer-events: auto;
+            transition: all 0.5s ease;
+            max-width: 250px;
+            word-wrap: break-word;
+        }
+
+
 
         #leaveRoomBtn {
             margin-top: 15px;
@@ -506,7 +551,10 @@
             <br>
             <button onclick="copyLink()" class="copy-button">Copy Room link</button>
         </div>
+        <div id="notification"></div>
 
+        <audio id="chatSound" src="{{ url_for('static', filename='uploads/sound.mp3') }}" preload="auto"></audio>
+        <div id="chatNotificationContainer"></div>
         <div class="chat-box">
             <div id="chatArea"></div>
             <div class="chat-input-area">
@@ -562,34 +610,54 @@
             if (autoplay) audio.play().catch(e => console.warn("Play blocked", e));
         }
         loadTrack(0, false);
+
+        function showNotification(message, duration = 2000) {
+            const notif = document.getElementById("notification");
+            notif.textContent = message;
+            notif.style.display = "block";
+            setTimeout(() => {
+                notif.style.display = "none";
+            }, duration);
+        }
+
         document.querySelectorAll('#playlist li').forEach((li, idx) => {
             li.onclick = () => {
                 if (isHost) socket.emit('track_change', { track: idx, room });
-                else alert("Only the host can change tracks.");
+                else showNotification("Only the host can change tracks.");
             }
         });
         document.getElementById("nextBtn").onclick = () => {
-            if (!isHost) return alert("Only the host can control tracks.");
+            if (!isHost) return showNotification("Only the host can control tracks.");
             let next = (currentTrack + 1) % playlist.length;
             socket.emit('track_change', { track: next, room });
         }
         document.getElementById("prevBtn").onclick = () => {
-            if (!isHost) return alert("Only the host can control tracks.");
+            if (!isHost) return showNotification("Only the host can control tracks.");
             let prev = (currentTrack - 1 + playlist.length) % playlist.length;
             socket.emit('track_change', { track: prev, room });
         }
         document.getElementById("shuffleBtn").onclick = () => {
-            if (!isHost) return alert("Only the host can shuffle.");
+            if (!isHost) return showNotification("Only the host can shuffle.");
             let idx = Math.floor(Math.random() * playlist.length);
             socket.emit("track_change", { track: idx, room })
         }
 
-        audio.addEventListener('play', () => {
+
+        audio.addEventListener('play', (e) => {
+            if (!isHost) {
+                e.preventDefault();
+                audio.currentTime = audio.currentTime;
+                showNotification("Only the host can play");
+            }
             if (!issync && isHost) {
                 socket.emit('music_event', { action: "play", time: audio.currentTime, room, track: currentTrack });
             }
         });
-        audio.addEventListener('pause', () => {
+        audio.addEventListener('pause', (e) => {
+            if (!isHost) {
+                e.preventDefault();
+                showNotification("Only the host can pause");
+            }
             if (!issync && isHost) {
                 socket.emit('music_event', { action: "pause", time: audio.currentTime, room, track: currentTrack });
             }
@@ -601,6 +669,10 @@
             }
         })
         audio.addEventListener('ratechange', () => {
+            if (!isHost) {
+                audio.playbackRate = 1;
+                showNotification("Only the host can change speed.");
+            }
             if (isHost) {
                 socket.emit('music_speed', {
                     speed: audio.playbackRate,
@@ -608,7 +680,12 @@
                 });
             }
         });
-        audio.addEventListener("seeked", () => {
+        audio.addEventListener("seeked", (e) => {
+            if (!isHost) {
+                e.preventDefault();
+                audio.currentTime = audio.currentTime;
+                showNotification("Only the host can seek");
+            }
             if (!issync && isHost) {
                 socket.emit("seek_event", {
                     time: audio.currentTime,
@@ -688,8 +765,29 @@
         });
 
         socket.on('user_joined', (data) => {
-            alert(`${data.username} has joined the room.`);
+            showNotification(`${data.username} has joined the room.`);
         });
+
+        function showChatNotification(message, sender) {
+            const container = document.getElementById('chatNotificationContainer');
+            const sound = document.getElementById('chatSound');
+
+            const notification = document.createElement('div');
+            notification.classList.add('chat-notification');
+            notification.innerHTML = `<strong>${sender}</strong><br>${message}`;
+            container.appendChild(notification);
+            setTimeout(() => {
+                notification.style.opacity = 1;
+                notification.style.transform = 'translateY(0)';
+            }, 50);
+            sound.currentTime = 0;
+            sound.play().catch(e => console.warn("Notification sound blocked:", e));
+            setTimeout(() => {
+                notification.style.opacity = 0;
+                notification.style.transform = 'translateY(-20px)';
+                setTimeout(() => notification.remove(), 500);
+            }, 4000);
+        }
 
 
         const chatArea = document.getElementById("chatArea");
@@ -715,13 +813,16 @@
             div.classList.add(data.username === username ? 'self' : 'other');
             chatArea.appendChild(div);
             chatArea.scrollTop = chatArea.scrollHeight;
+            if (data.username !== username) {
+                showChatNotification(data.message, data.username);
+            }
         });
 
         function copyLink() {
             const link = document.getElementById('room-link');
             link.select();
             document.execCommand('copy');
-            alert("link is copied to clipboard!");
+            showNotification("link is copied to clipboard!");
         }
         function addGrantedUser(userId, uname) {
             const container = document.getElementById("grantedUsersList");
@@ -744,7 +845,7 @@
         // revoke effect for revoked user
         socket.on("control_revoked", data => {
             if (data.user_id === parseInt(currentUserID)) {
-                alert("Your control has been revoked by the host.");
+                showNotification("Your control has been revoked by the host.");
                 isHost = false;
                 document.querySelector(".host-access-requests")?.remove();
                 document.querySelector(".granted-users-section")?.remove();

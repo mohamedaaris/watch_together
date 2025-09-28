@@ -93,7 +93,7 @@
             transform: scale(1.05);
             box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
         }
-        
+
         .access-request-section {
             background: rgba(0, 0, 0, 0.8);
             border: 2px solid #00c9ff;
@@ -290,6 +290,48 @@
             box-shadow: 0 0 15px #ff7961, 0 0 30px #ff7961;
         }
 
+        #notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #00c9ff;
+            color: black;
+            padding: 10px 15px;
+            border-radius: 6px;
+            box-shadow: 0 0 10px #00c9ff;
+            font-family: 'Orbitron', sans-serif;
+            display: none;
+            z-index: 9999;
+        }
+         #chatNotificationContainer {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            /* space between multiple notifications */
+            pointer-events: none;
+        }
+
+        /* Individual notification toast */
+        .chat-notification {
+            background: rgba(0, 0, 0, 0.9);
+            color: #00ffcc;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 12px #00ffff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            opacity: 0;
+            transform: translateY(-20px);
+            pointer-events: auto;
+            transition: all 0.5s ease;
+            max-width: 250px;
+            word-wrap: break-word;
+        }
+
 
 
         /* 🌐 Mobile responsive layout */
@@ -362,6 +404,9 @@
             <br>
             <button onclick="copyLink()" class="copy-button">Copy Room link</button>
         </div>
+        <div id="notification"></div>
+        <audio id="chatSound" src="{{ url_for('static', filename='uploads/sound.mp3') }}" preload="auto"></audio>
+        <div id="chatNotificationContainer"></div>
         <div class="chat-box">
             <div id="chatArea"></div>
             <div class="chat-input-area">
@@ -382,44 +427,70 @@
             socket.emit('leave_room', { room, username });
             window.location.href = '/';
         };
+        function showNotification(message, duration = 2000) {
+            const notif = document.getElementById("notification");
+            notif.textContent = message;
+            notif.style.display = "block";
+            setTimeout(() => {
+                notif.style.display = "none";
+            }, duration);
+        }
 
         let issync = false;
-        video.addEventListener('seeking', () => {
-            if(!issync && isHost) {
-            socket.emit('seek_event', { time: video.currentTime, room: room, isPlaying: !video.paused, sender: username });
+        video.addEventListener('seeking', (e) => {
+            if (!isHost) {
+                e.preventDefault();
+                video.currentTime = video.currentTime;
+                showNotification("Only the host can seek");
+            }
+            if (!issync && isHost) {
+                socket.emit('seek_event', { time: video.currentTime, room: room, isPlaying: !video.paused, sender: username });
             }
         });
         video.addEventListener('play', () => {
+            if (!isHost) {
+                e.preventDefault();
+                video.currentTime = video.currentTime;
+                showNotification("Only the host can play");
+            }
             if (!issync && isHost) {
                 socket.emit('video_event', { action: "play", time: video.currentTime, room });
             }
         });
         video.addEventListener('pause', () => {
+            if (!isHost) {
+                e.preventDefault();
+                showNotification("Only the host can pause");
+            }
             if (!issync && isHost) {
                 socket.emit('video_event', { action: "pause", time: video.currentTime, room });
             }
         });
         video.addEventListener('ratechange', () => {
-            if(isHost) {
-            socket.emit('speed_event', {
-                speed: video.playbackRate,
-                room: room
-            });
-        }
+            if(!isHost) {
+                video.playbackRate = 1;
+                showNotification("Only the host can change speed.");
+            }
+            if (isHost) {
+                socket.emit('speed_event', {
+                    speed: video.playbackRate,
+                    room: room
+                });
+            }
         });
         socket.on('seek_event', data => {
             if (data.sender === username) return;
             if (Math.abs(video.currentTime - data.time) > 0.5) {
-                issync=true;
+                issync = true;
                 video.currentTime = data.time;
                 setTimeout(() => { issync = false; }, 200);
             }
             if (data.isPlaying && video.paused) {
-                issync=true;
+                issync = true;
                 video.play().catch(e => console.warn("Autoplay blocked on seek:", e));
                 setTimeout(() => { issync = false; }, 200);
             } else if (!data.isPlaying && !video.paused) {
-                issync=true;
+                issync = true;
                 video.pause();
                 setTimeout(() => { issync = false; }, 200);
             }
@@ -437,6 +508,30 @@
         socket.on('speed_event', data => {
             video.playbackRate = data.speed;
         });
+        socket.on('user_joined', (data) => {
+            showNotification(`${data.username} has joined the room.`);
+        });
+
+        function showChatNotification(message, sender) {
+            const container = document.getElementById('chatNotificationContainer');
+            const sound = document.getElementById('chatSound');
+
+            const notification = document.createElement('div');
+            notification.classList.add('chat-notification');
+            notification.innerHTML = `<strong>${sender}</strong><br>${message}`;
+            container.appendChild(notification);
+            setTimeout(() => {
+                notification.style.opacity = 1;
+                notification.style.transform = 'translateY(0)';
+            }, 50);
+            sound.currentTime = 0;
+            sound.play().catch(e => console.warn("Notification sound blocked:", e));
+            setTimeout(() => {
+                notification.style.opacity = 0;
+                notification.style.transform = 'translateY(-20px)';
+                setTimeout(() => notification.remove(), 500);
+            }, 4000);
+        }
 
         const chatArea = document.getElementById("chatArea");
         const chatInput = document.getElementById("chatInput");
@@ -462,13 +557,16 @@
             div.classList.add(data.username === username ? 'self' : 'other');
             chatArea.appendChild(div);
             chatArea.scrollTop = chatArea.scrollHeight;
+            if (data.username !== username) {
+                showChatNotification(data.message, data.username);
+            }
         });
 
         function copyLink() {
             const link = document.getElementById('room-link');
             link.select();
             document.execCommand('copy');
-            alert("link is copied to clipboard!");
+            showNotification("link is copied to clipboard!");
         }
 
         function addGrantedUser(userId, uname) {
@@ -491,7 +589,7 @@
 
         socket.on("control_revoked", data => {
             if (data.user_id === parseInt(currentUserID)) {
-                alert("Your control has been revoked by the host.");
+                showNotification("Your control has been revoked by the host.");
                 isHost = false;
                 document.querySelector(".host-access-requests")?.remove();
                 document.querySelector(".granted-users-section")?.remove();
@@ -507,43 +605,43 @@
         });
 
         if (!isHost) {
-                const requestBtn = document.getElementById("requestControlBtn");
-                const statusText = document.getElementById("requestStatus");
+            const requestBtn = document.getElementById("requestControlBtn");
+            const statusText = document.getElementById("requestStatus");
 
-                requestBtn.onclick = () => {
-                    socket.emit("request_control", { room });
-                    statusText.textContent = "Request sent. Waiting for host approval...";
-                    requestBtn.disabled = true;
+            requestBtn.onclick = () => {
+                socket.emit("request_control", { room });
+                statusText.textContent = "Request sent. Waiting for host approval...";
+                requestBtn.disabled = true;
+            };
+
+            socket.on("control_granted", () => {
+                statusText.textContent = "You have been granted control!";
+                isHost = true;
+                document.querySelector(".access-request-section").style.display = "none";
+                document.querySelector(".host-access-requests").style.display = "block";
+                video.controls = true;
+            });
+        } else {
+            const pendingList = document.getElementById("pendingRequests");
+
+            socket.on("control_request_received", data => {
+                const li = document.createElement("li");
+                li.id = `req-${data.user_id}`;
+                li.textContent = `${data.username} requests control `;
+
+                const approveBtn = document.createElement("button");
+                approveBtn.textContent = "Approve";
+                approveBtn.style.marginLeft = "10px";
+                approveBtn.onclick = () => {
+                    socket.emit("grant_control", { room, user_id: data.user_id });
+                    li.remove();
+                    addGrantedUser(data.user_id, data.username);
                 };
 
-                socket.on("control_granted", () => {
-                    statusText.textContent = "You have been granted control!";
-                    isHost = true;
-                    document.querySelector(".access-request-section").style.display = "none";
-                    document.querySelector(".host-access-requests").style.display = "block";
-                    video.controls=true;
-                });
-            } else {
-                const pendingList = document.getElementById("pendingRequests");
-
-                socket.on("control_request_received", data => {
-                    const li = document.createElement("li");
-                    li.id = `req-${data.user_id}`;
-                    li.textContent = `${data.username} requests control `;
-
-                    const approveBtn = document.createElement("button");
-                    approveBtn.textContent = "Approve";
-                    approveBtn.style.marginLeft = "10px";
-                    approveBtn.onclick = () => {
-                        socket.emit("grant_control", { room, user_id: data.user_id });
-                        li.remove();
-                        addGrantedUser(data.user_id, data.username);
-                    };
-
-                    li.appendChild(approveBtn);
-                    pendingList.appendChild(li);
-                });
-            }
+                li.appendChild(approveBtn);
+                pendingList.appendChild(li);
+            });
+        }
     </script>
 
 </body>
