@@ -343,6 +343,16 @@
             white-space: normal;
         }
 
+        #monica-content-root,
+        .monica-widget {
+            display: none !important;
+            visibility: hidden !important;
+            width: 0 !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
         .chat-toggle {
             position: fixed;
             bottom: 20px;
@@ -356,7 +366,7 @@
             font-size: 22px;
             cursor: pointer;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-            z-index: 1100;
+            z-index: 1200;
             transition: transform 0.2s ease;
         }
 
@@ -479,21 +489,18 @@
             your browser does not support this video tag.
         </video>
 
-        {% if not is_host %}
-        <div class="access-request-section">
+        <div class="access-request-section" {% if is_host %}style="display:none;" {% endif %}>
             <button id="requestControlBtn">Request Control</button>
             <p id="requestStatus" style="color:#00ffcc;"></p>
         </div>
-        {% else %}
-        <div class="host-access-requests">
+        <div class="host-access-requests" {% if not is_host %}style="display:none;" {% endif %}>
             <h4>Pending Control Requests</h4>
             <ul id="pendingRequests" style="list-style:none; padding:0;"></ul>
         </div>
-        <div class="granted-users-section">
+        <div class="granted-users-section" {% if not is_host %}style="display:none;" {% endif %}>
             <h4>Granted Users</h4>
             <div id="grantedUsersList"></div>
         </div>
-        {% endif %}
 
         <div class="link-box">
             Share this room: <br>
@@ -760,7 +767,9 @@
             };
 
             socket.on("control_granted", () => {
-                statusText.textContent = "You have been granted control!";
+                if (statusText) {
+                    statusText.textContent = "You have been granted control!";
+                }
                 isHost = true;
                 document.querySelector(".access-request-section").style.display = "none";
                 document.querySelector(".host-access-requests").style.display = "block";
