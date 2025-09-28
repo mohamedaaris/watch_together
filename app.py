@@ -526,7 +526,7 @@ def handle_revoke_control(data):
     if not user:
         return
     username = user.name
-    emit("control_revoked", {"username": username}, room=f"user_{user.id}")
+    emit("control_revoked", {"user_id": user.id}, room=f"user_{user.id}")
     emit("chat_message", {
         "username": "System",
         "message": f"Host has revoked control from {username}."

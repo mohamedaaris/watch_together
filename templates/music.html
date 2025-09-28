@@ -116,6 +116,7 @@
             font-weight: bold;
             font-size: 1.1rem;
         }
+
         .access-request-section {
             background: rgba(0, 0, 0, 0.8);
             border: 2px solid #00c9ff;
@@ -742,52 +743,60 @@
 
         // revoke effect for revoked user
         socket.on("control_revoked", data => {
-            if (data.username === username) {
+            if (data.user_id === userId) {
                 alert("Your control has been revoked by the host.");
                 isHost = false;
                 document.querySelector(".host-access-requests")?.remove();
                 document.querySelector(".granted-users-section")?.remove();
+                const requestSection = document.querySelector(".access-request-section");
+                if (requestSection) {
+                    requestSection.style.display = "block";
+                    const requestBtn = document.getElementById("requestControlBtn");
+                    const statusText = document.getElementById("requestStatus");
+                    requestBtn.disabled = false;
+                    statusText.textContent = "";
+                }
             }
         });
 
         if (!isHost) {
-                const requestBtn = document.getElementById("requestControlBtn");
-                const statusText = document.getElementById("requestStatus");
+            const requestBtn = document.getElementById("requestControlBtn");
+            const statusText = document.getElementById("requestStatus");
 
-                requestBtn.onclick = () => {
-                    socket.emit("request_control", { room });
-                    statusText.textContent = "Request sent. Waiting for host approval...";
-                    requestBtn.disabled = true;
+            requestBtn.onclick = () => {
+                socket.emit("request_control", { room });
+                statusText.textContent = "Request sent. Waiting for host approval...";
+                requestBtn.disabled = true;
+            };
+
+            socket.on("control_granted", () => {
+                statusText.textContent = "You have been granted control!";
+                isHost = true;
+                document.querySelector(".access-request-section").style.display = "none";
+                document.querySelector(".host-access-requests").style.display = "block";
+            });
+        } else {
+            const pendingList = document.getElementById("pendingRequests");
+
+            socket.on("control_request_received", data => {
+                const li = document.createElement("li");
+                li.id = `req-${data.user_id}`;
+                li.textContent = `${data.username} requests control `;
+
+                const approveBtn = document.createElement("button");
+                approveBtn.textContent = "Approve";
+                approveBtn.style.marginLeft = "10px";
+                approveBtn.onclick = () => {
+                    socket.emit("grant_control", { room, user_id: data.user_id });
+                    li.remove();
+                    addGrantedUser(data.user_id, data.username);
                 };
 
-                socket.on("control_granted", () => {
-                    statusText.textContent = "You have been granted control!";
-                    isHost = true;
-                    document.querySelector(".access-request-section").style.display = "none";
-                    document.querySelector(".host-access-requests").style.display = "block";
-                });
-            } else {
-                const pendingList = document.getElementById("pendingRequests");
+                li.appendChild(approveBtn);
+                pendingList.appendChild(li);
+            });
+        }
 
-                socket.on("control_request_received", data => {
-                    const li = document.createElement("li");
-                    li.id = `req-${data.user_id}`;
-                    li.textContent = `${data.username} requests control `;
-
-                    const approveBtn = document.createElement("button");
-                    approveBtn.textContent = "Approve";
-                    approveBtn.style.marginLeft = "10px";
-                    approveBtn.onclick = () => {
-                        socket.emit("grant_control", { room, user_id: data.user_id });
-                        li.remove();
-                        addGrantedUser(data.user_id, data.username);
-                    };
-
-                    li.appendChild(approveBtn);
-                    pendingList.appendChild(li);
-                });
-            }
-    
     </script>
 
 </body>
