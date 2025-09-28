@@ -268,6 +268,10 @@ def api_rooms():
 def delete_room(room_id):
     room=Room.query.get_or_404(room_id)
     try:
+        try:
+            r2_delete_prefix(f"rooms/{room.name}/")
+        except Exception as e:
+            print("R2 delete error:", e)
         db.session.delete(room)
         db.session.commit()
     except Exception as e:
