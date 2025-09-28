@@ -532,11 +532,11 @@
         </div>
 
         <div class="audio-player-wrap">
-            <audio id="audioplayer" controls></audio>
+            <audio id="audioplayer" controls {% if not is_host %}disabled{% endif %}></audio>
             <div id="controls">
-                <button id="prevBtn">Prev</button>
-                <button id="nextBtn">Next</button>
-                <button id="shuffleBtn">Shuffle</button>
+                <button id="prevBtn" {% if not is_host %}disabled{% endif %}>Prev</button>
+                <button id="nextBtn" {% if not is_host %}disabled{% endif %}>Next</button>
+                <button id="shuffleBtn" {% if not is_host %}disabled{% endif %}>Shuffle</button>
             </div>
             <span id="nowPlaying"></span>
         </div>
@@ -624,6 +624,19 @@
         }
         loadTrack(0, false);
 
+        if (!isHost) {
+            audio.controls = false; // hide play/pause/seek
+            audio.addEventListener('play', e => e.preventDefault());
+            audio.addEventListener('pause', e => e.preventDefault());
+            audio.addEventListener('seeked', e => e.preventDefault());
+            audio.addEventListener('ratechange', e => e.preventDefault());
+
+            // Disable all control buttons
+            document.getElementById("prevBtn").disabled = true;
+            document.getElementById("nextBtn").disabled = true;
+            document.getElementById("shuffleBtn").disabled = true;
+        }
+
         function showNotification(message, duration = 2000) {
             const notif = document.getElementById("notification");
             notif.textContent = message;
@@ -657,17 +670,11 @@
 
 
         audio.addEventListener('play', () => {
-            if (!isHost) {
-                showNotification("Only the host can play");
-            }
             if (!issync && isHost) {
                 socket.emit('music_event', { action: "play", time: audio.currentTime, room, track: currentTrack });
             }
         });
         audio.addEventListener('pause', () => {
-            if (!isHost) {
-                showNotification("Only the host can pause");
-            }
             if (!issync && isHost) {
                 socket.emit('music_event', { action: "pause", time: audio.currentTime, room, track: currentTrack });
             }
@@ -679,9 +686,6 @@
             }
         })
         audio.addEventListener('ratechange', () => {
-            if (!isHost) {
-                showNotification("Only the host can change speed.");
-            }
             if (isHost) {
                 socket.emit('music_speed', {
                     speed: audio.playbackRate,
@@ -690,9 +694,6 @@
             }
         });
         audio.addEventListener("seeked", () => {
-            if (!isHost) {
-                showNotification("Only the host can seek");
-            }
             if (!issync && isHost) {
                 socket.emit("seek_event", {
                     time: audio.currentTime,
@@ -880,6 +881,10 @@
             socket.on("control_granted", () => {
                 statusText.textContent = "You have been granted control!";
                 isHost = true;
+                audio.controls = true;
+                document.getElementById("prevBtn").disabled = false;
+                document.getElementById("nextBtn").disabled = false;
+                document.getElementById("shuffleBtn").disabled = false;
                 document.querySelector(".access-request-section").style.display = "none";
                 document.querySelector(".host-access-requests").style.display = "block";
             });

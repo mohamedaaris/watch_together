@@ -387,7 +387,7 @@
             <h3>Welcome {{username}}!</h3>
             <button id="leaveRoomBtn">Leave Room</button>
         </div>
-        <video id="videoPlayer" controls=false>
+        <video id="videoPlayer" {% if not is_host %} controls=false {% endif %}>
             <source src="{{ video_url }}" type="video/mp4">
             your browser does not support this video tag.
         </video>
@@ -450,34 +450,31 @@
         }
 
         let issync = false;
+        if (!isHost) {
+            video.controls = false;
+
+            video.addEventListener('play', e => e.preventDefault());
+            video.addEventListener('pause', e => e.preventDefault());
+            video.addEventListener('seeking', e => e.preventDefault());
+            video.addEventListener('ratechange', e => e.preventDefault());
+        }
+
         video.addEventListener('seeking', () => {
-            if (!isHost) {
-                showNotification("Only the host can seek");
-            }
             if (!issync && isHost) {
                 socket.emit('seek_event', { time: video.currentTime, room: room, isPlaying: !video.paused, sender: username });
             }
         });
         video.addEventListener('play', () => {
-            if (!isHost) {
-                showNotification("Only the host can play");
-            }
             if (!issync && isHost) {
                 socket.emit('video_event', { action: "play", time: video.currentTime, room });
             }
         });
         video.addEventListener('pause', () => {
-            if (!isHost) {
-                showNotification("Only the host can pause");
-            }
             if (!issync && isHost) {
                 socket.emit('video_event', { action: "pause", time: video.currentTime, room });
             }
         });
         video.addEventListener('ratechange', () => {
-            if (!isHost) {
-                showNotification("Only the host can change speed.");
-            }
             if (isHost) {
                 socket.emit('speed_event', {
                     speed: video.playbackRate,
