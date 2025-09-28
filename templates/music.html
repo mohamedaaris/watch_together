@@ -625,6 +625,7 @@
         loadTrack(0, false);
 
         if (!isHost) {
+            document.getElementById("controls").style.display = "none";
             audio.controls = false; // hide play/pause/seek
             audio.addEventListener('play', e => e.preventDefault());
             audio.addEventListener('pause', e => e.preventDefault());
@@ -653,17 +654,14 @@
             }
         });
         document.getElementById("nextBtn").onclick = () => {
-            if (!isHost) return showNotification("Only the host can control tracks.");
             let next = (currentTrack + 1) % playlist.length;
             socket.emit('track_change', { track: next, room });
         }
         document.getElementById("prevBtn").onclick = () => {
-            if (!isHost) return showNotification("Only the host can control tracks.");
             let prev = (currentTrack - 1 + playlist.length) % playlist.length;
             socket.emit('track_change', { track: prev, room });
         }
         document.getElementById("shuffleBtn").onclick = () => {
-            if (!isHost) return showNotification("Only the host can shuffle.");
             let idx = Math.floor(Math.random() * playlist.length);
             socket.emit("track_change", { track: idx, room })
         }
@@ -865,6 +863,11 @@
                     requestBtn.disabled = false;
                     statusText.textContent = "";
                 }
+                audio.controls = false;
+                document.getElementById("controls").style.display = "none";
+                document.getElementById("prevBtn").disabled = true;
+                document.getElementById("nextBtn").disabled = true;
+                document.getElementById("shuffleBtn").disabled = true;
             }
         });
 

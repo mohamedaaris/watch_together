@@ -387,7 +387,7 @@
             <h3>Welcome {{username}}!</h3>
             <button id="leaveRoomBtn">Leave Room</button>
         </div>
-        <video id="videoPlayer" {% if not is_host %} controls=false {% endif %}>
+        <video id="videoPlayer" {% if not is_host %} controls {% endif %}>
             <source src="{{ video_url }}" type="video/mp4">
             your browser does not support this video tag.
         </video>
@@ -605,6 +605,7 @@
                     requestBtn.disabled = false;
                     statusText.textContent = "";
                 }
+                video.controls = false;
             }
         });
 
