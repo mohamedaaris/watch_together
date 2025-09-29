@@ -461,6 +461,10 @@
                 width: 90%;
             }
 
+            #chatArea {
+                max-height: calc(100vh - 150px);
+            }
+
             #sendBtn {
                 padding: 6px 10px;
                 font-size: 0.9rem;
@@ -541,6 +545,11 @@
         let isHost = "{{ is_host }}" === "True";
         const video = document.getElementById('videoPlayer');
         socket.emit('join_event', { room, username });
+
+        if (!isHost) {
+            socket.emit('request_sync', { target: username, room: room });
+        }
+        
         document.getElementById("leaveRoomBtn").onclick = () => {
             socket.emit('leave_room', { room, username });
             window.location.href = '/';
@@ -606,6 +615,36 @@
             } else if (!data.isPlaying && !video.paused) {
                 issync = true;
                 video.pause();
+                setTimeout(() => { issync = false; }, 200);
+            }
+        });
+
+        socket.on('request_sync', data => {
+            if (isHost) {
+                socket.emit('send_sync', {
+                    target: data.target,
+                    room: room,
+                    track: video.currentSrc,
+                    time: video.currentTime,
+                    isPlaying: !video.paused,
+                    speed: video.playbackRate
+                });
+            }
+        });
+
+        socket.on('send_sync', data => {
+            if (data.target === username) {
+                issync = true;
+                if (video.currentSrc !== data.track) {
+                    video.src = data.track;
+                }
+                video.currentTime = data.time;
+                video.playbackRate = data.speed;
+                if (data.isPlaying) {
+                    video.play().catch(e => console.warn("Autoplay blocked on sync:", e));
+                } else {
+                    video.pause();
+                }
                 setTimeout(() => { issync = false; }, 200);
             }
         });
@@ -779,7 +818,6 @@
                 }
                 isHost = true;
                 document.querySelector(".access-request-section").style.display = "none";
-                document.querySelector(".host-access-requests").style.display = "block";
                 video.removeEventListener('play', preventPlay);
                 video.removeEventListener('pause', preventPause);
                 video.removeEventListener('seeking', preventSeek);

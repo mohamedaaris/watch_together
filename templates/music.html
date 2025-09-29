@@ -697,6 +697,10 @@
         let isHost = "{{is_host}}" === "True";
         socket.emit('join_event', { room: room, username: username });
 
+        if (!isHost) {
+            socket.emit('request_sync', { target: username, room: room });
+        }
+
         document.getElementById("leaveRoomBtn").onclick = () => {
             socket.emit('leave_room', { room, username });
             window.location.href = '/';
@@ -766,7 +770,6 @@
             let idx = Math.floor(Math.random() * playlist.length);
             socket.emit("track_change", { track: idx, room })
         }
-
 
         audio.addEventListener('play', () => {
             if (!issync && isHost) {
