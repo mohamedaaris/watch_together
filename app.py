@@ -632,11 +632,11 @@ def handle_join_room(data):
             db.session.commit()
     if room in room_state:
         emit('sync_playback', room_state[room], room=request.sid)
+        
     if room_obj and room_obj.room_type == 'music':
         host_user = User.query.get(room_obj.host_id)
-        host_name = host_user.name if host_user else None
-        if host_name and host_name in room_users[room]:
-            emit('request_sync', {'target': username}, room=room, include_self=False)
+        if host_user:
+            emit('request_sync', {'username': username}, room=f"user_{host_user.id}")
     
 @socketio.on('connect')
 def on_connect():
@@ -677,6 +677,23 @@ def handle_leave_room(data):
             db.session.delete(room_obj)
             db.session.commit() 
             release_queue()
+            
+@socketio.on('request_sync')
+def handle_request_sync(data):
+    room = data.get('room')
+    username = data.get('username')
+
+    if not room or not username:
+        return
+
+    room_obj = Room.query.filter_by(name=room).first()
+    if not room_obj:
+        return
+
+    host_user = User.query.get(room_obj.host_id)
+    if host_user:
+        emit('request_sync', {'target_username': username}, room=f"user_{host_user.id}")
+
         
 @socketio.on('send_sync')
 def handle_send_sync(data):
