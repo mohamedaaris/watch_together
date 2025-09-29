@@ -25,6 +25,7 @@
         #chatArea {
             flex: 1;
             overflow-y: auto;
+            max-height: calc(100vh - 150px);
             background: #111;
             padding: 10px;
             border-radius: 8px;
@@ -83,12 +84,9 @@
         }
 
         .container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 95%;
             max-width: 700px;
-            margin: auto;
+            width: 95%;
+            margin: 30px auto;
         }
 
         #sendBtn {
@@ -106,13 +104,6 @@
         #sendBtn:hover {
             transform: scale(1.05);
             box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
-        }
-
-        .access-request-section,
-        .host-access-requests {
-            width: 100%;
-            max-width: 600px;
-            margin: 15px auto;
         }
 
         .access-request-section {
@@ -249,7 +240,7 @@
 
         video {
             width: 100%;
-            max-width: 600px;
+            max-width: 700px;
             border: 2px solid #00c9ff;
             border-radius: 10px;
             margin-top: 20px;
