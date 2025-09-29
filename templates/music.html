@@ -17,7 +17,6 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
         }
 
         #vanta-bg {
@@ -110,7 +109,7 @@
             transform: scale(0.96);
         }
 
-        #audio-player-wrap #nowPlaying {
+        #nowPlaying {
             display: block;
             margin-top: 8px;
             color: #00c9ff;
@@ -126,11 +125,9 @@
             transition: transform 0.2s ease, color 0.2s ease;
         }
 
-        #audio-player-wrap #nowPlaying:hover {
+        #nowPlaying:hover {
             transform: scale(1.03);
-            /* subtle zoom */
             color: #33d6ff;
-            /* slightly lighter cyan */
         }
 
         .access-request-section {

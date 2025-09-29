@@ -83,9 +83,12 @@
         }
 
         .container {
-            max-width: 700px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             width: 95%;
-            margin: 30px auto;
+            max-width: 700px;
+            margin: auto;
         }
 
         #sendBtn {
@@ -103,6 +106,13 @@
         #sendBtn:hover {
             transform: scale(1.05);
             box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
+        }
+
+        .access-request-section,
+        .host-access-requests {
+            width: 100%;
+            max-width: 600px;
+            margin: 15px auto;
         }
 
         .access-request-section {
