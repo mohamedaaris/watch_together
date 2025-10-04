@@ -124,6 +124,12 @@ class Room(db.Model):
         cascade="all, delete-orphan",
         passive_deletes=True
     )
+    granted_users = db.relationship(
+        "RoomGranted",
+        back_populates="room",
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )
     @property
     def members_count(self):
         return RoomMember.query.filter_by(room_id=self.id).count()
@@ -162,7 +168,7 @@ class RoomGranted(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     granted_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
-    room = db.relationship("Room", backref="granted_users")
+    room = db.relationship("Room", back_populates="granted_users")
     user = db.relationship("User", backref="granted_rooms")
     
 class ChatMessage(db.Model):
@@ -380,6 +386,8 @@ def create_room():
     existing_q=RoomQueue.query.filter_by(name=room).first()
     if existing or existing_q:
         return jsonify({"error": "Room already exists. Choose another."}), 400
+    ChatMessage.query.filter_by(room=room).delete()
+    db.session.commit()
     room_type='video' if (video and video.filename) else 'music' if(music_zip and music_zip.filename) else None
     if not room_type:
         return jsonify({"error": "Please upload a video or a ZIP file with music tracks."}), 400
