@@ -462,7 +462,7 @@
             }
 
             #chatArea {
-                max-height: calc(100vh - 150px);
+                max-height: calc(100vh - 120px);
             }
 
             #sendBtn {
@@ -739,6 +739,26 @@
                 }
             }
         });
+        socket.on("chat_history", data => {
+            chatArea.innerHTML = ""; // Clear any existing messages
+            data.messages.forEach(msg => {
+                const div = document.createElement('div');
+                div.classList.add('message', msg.username === username ? 'self' : 'other');
+
+                const avatar = `<span style="display:inline-block;width:24px;height:24px;
+        background:#00c9ff;color:black;border-radius:50%;text-align:center;
+        font-size:14px;line-height:24px;margin-right:6px;">${msg.username[0].toUpperCase()}</span>`;
+
+                // Parse URLs into clickable links
+                const messageText = msg.message.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#0ff;">$1</a>');
+                const time = new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                div.innerHTML = `${avatar}<strong>${msg.username}</strong><br>${messageText}<br><small>${time}</small>`;
+
+                chatArea.appendChild(div);
+            });
+            chatArea.scrollTop = chatArea.scrollHeight;
+        });
+
         socket.on("typing", data => {
             typingIndicator.textContent = `${data.username} is typing...`;
         });

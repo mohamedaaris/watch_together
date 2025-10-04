@@ -164,8 +164,14 @@ class RoomGranted(db.Model):
 
     room = db.relationship("Room", backref="granted_users")
     user = db.relationship("User", backref="granted_rooms")
+    
+class ChatMessage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    room = db.Column(db.String(250), nullable=False)
+    username = db.Column(db.String(250), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
-      
 class loginform(FlaskForm):
     email=StringField('Email', validators=[DataRequired(),Email()])
     password=PasswordField('Password', validators=[DataRequired(), Length(min=6, max=32)])
@@ -361,10 +367,14 @@ def logout():
 def create_room():
     room=request.form['room']
     video=request.files.get('video')
+    username_input = request.form.get('username') 
     music_zip=request.files.get('music_zip')
     user=User.query.get(session['user_id'])
     if not user:
         return jsonify({"error": "User not found in session."}), 400
+    actual_username = username_input if username_input else user.name
+    encrypted_username = encrypt_username(actual_username) 
+    
     existing=Room.query.filter_by(name=room).first()
     existing_q=RoomQueue.query.filter_by(name=room).first()
     if existing or existing_q:
@@ -405,7 +415,6 @@ def create_room():
             Params={"Bucket":R2_BUCKET,"Key":key},
             ExpiresIn=3600
         )
-        encrypted_username=encrypt_username(user.name)
         return jsonify({"room": room, "upload_url": url, "room_link": url_for('room', room=room, encrypted_username=encrypted_username)})
     elif room_type == 'music':
         try:
@@ -638,6 +647,10 @@ def handle_join_room(data):
         room_users[room]=set()
     room_users[room].add(username)
     emit('chat_message', {'username': 'System', 'message': f'{username} has joined the room.'}, room=room)
+    
+    previous_messages = ChatMessage.query.filter_by(room=room).order_by(ChatMessage.timestamp.asc()).all()
+    history = [{'username': m.username, 'message': m.message, 'timestamp': m.timestamp.isoformat()} for m in previous_messages]
+    emit('chat_history', {'messages': history}, room=request.sid)
     room_obj = Room.query.filter_by(name=room).first()
     if room_obj:
         user = User.query.filter_by(name=username).first()
@@ -652,7 +665,7 @@ def handle_join_room(data):
             db.session.commit()
         
         granted = RoomGranted.query.filter_by(room_id=room_obj.id).all()
-        granted_list = [{"user_id": g.user_id, "username": g.user.name} for g in granted]
+        granted_list = [{"user_id": g.user_id, "username": room_users[room].get(g.user_id, g.user.name)} for g in granted]
         emit('current_granted_users', {"users": granted_list}, room=request.sid)
         if user and any(g.user_id == user.id for g in granted):
             emit('control_granted', room=request.sid)
@@ -786,6 +799,9 @@ def handle_chat_message(data):
     room = data['room']
     username = data['username']
     message = data['message']
+    chat_msg = ChatMessage(room=room, username=username, message=message)
+    db.session.add(chat_msg)
+    db.session.commit()
     emit('chat_message', {'username': username, 'message': message}, room=room)
 
 # =========================
