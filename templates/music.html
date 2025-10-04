@@ -988,6 +988,10 @@
         }
         function addGrantedUser(userId, uname) {
             const container = document.getElementById("grantedUsersList");
+            // Check if user already exists to prevent duplicates
+            if (document.getElementById(`granted-${userId}`)) {
+                return;
+            }
             const div = document.createElement("div");
             div.classList.add("granted-user");
             div.id = `granted-${userId}`;
@@ -1004,25 +1008,42 @@
             container.appendChild(div);
         }
 
+        // Helper function to enable controls for granted users
+        function enableControls() {
+            isHost = true;
+            audio.controls = true;
+            document.getElementById("prevBtn").disabled = false;
+            document.getElementById("nextBtn").disabled = false;
+            document.getElementById("shuffleBtn").disabled = false;
+            document.getElementById("controls").style.display = "block";
+            const requestSection = document.querySelector(".access-request-section");
+            if (requestSection) requestSection.style.display = "none";
+        }
+
+        // Helper function to disable controls for revoked users
+        function disableControls() {
+            isHost = false;
+            audio.controls = false;
+            document.getElementById("controls").style.display = "none";
+            document.getElementById("prevBtn").disabled = true;
+            document.getElementById("nextBtn").disabled = true;
+            document.getElementById("shuffleBtn").disabled = true;
+            const requestSection = document.querySelector(".access-request-section");
+            if (requestSection) {
+                requestSection.style.display = "block";
+                const requestBtn = document.getElementById("requestControlBtn");
+                const statusText = document.getElementById("requestStatus");
+                requestBtn.disabled = false;
+                statusText.textContent = "";
+            }
+        }
+
         // revoke effect for revoked user
         socket.on("control_revoked", data => {
             if (data.user_id === parseInt(currentUserID)) {
-                isHost = false;
+                disableControls();
                 document.querySelector(".host-access-requests")?.remove();
                 document.querySelector(".granted-users-section")?.remove();
-                const requestSection = document.querySelector(".access-request-section");
-                if (requestSection) {
-                    requestSection.style.display = "block";
-                    const requestBtn = document.getElementById("requestControlBtn");
-                    const statusText = document.getElementById("requestStatus");
-                    requestBtn.disabled = false;
-                    statusText.textContent = "";
-                }
-                audio.controls = false;
-                document.getElementById("controls").style.display = "none";
-                document.getElementById("prevBtn").disabled = true;
-                document.getElementById("nextBtn").disabled = true;
-                document.getElementById("shuffleBtn").disabled = true;
             }
         });
 
@@ -1038,14 +1059,7 @@
 
             socket.on("control_granted", () => {
                 statusText.textContent = "You have been granted control!";
-                isHost = true;
-                audio.controls = true;
-                document.getElementById("prevBtn").disabled = false;
-                document.getElementById("nextBtn").disabled = false;
-                document.getElementById("shuffleBtn").disabled = false;
-                document.getElementById("controls").style.display = "block";
-                document.querySelector(".access-request-section").style.display = "none";
-                document.querySelector(".host-access-requests").style.display = "none";
+                enableControls();
             });
         } else {
             const pendingList = document.getElementById("pendingRequests");
@@ -1069,16 +1083,9 @@
             });
             socket.on("current_granted_users", data => {
                 data.users.forEach(u => addGrantedUser(u.user_id, u.username));
+                // Check if current user is in the granted list and enable controls if so
                 if (!isHost && data.users.some(u => u.user_id == parseInt(currentUserID))) {
-                    isHost = true;
-                    audio.controls = true;
-                    document.getElementById("prevBtn").disabled = false;
-                    document.getElementById("nextBtn").disabled = false;
-                    document.getElementById("shuffleBtn").disabled = false;
-                    document.getElementById("controls").style.display = "block";
-                    const requestSection = document.querySelector(".access-request-section");
-                    if (requestSection) requestSection.style.display = "none";
-
+                    enableControls();
                     const statusText = document.getElementById("requestStatus");
                     if (statusText) statusText.textContent = "You have been granted control!";
                 }

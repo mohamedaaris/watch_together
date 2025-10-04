@@ -767,6 +767,10 @@
 
         function addGrantedUser(userId, uname) {
             const container = document.getElementById("grantedUsersList");
+            // Check if user already exists to prevent duplicates
+            if (document.getElementById(`granted-${userId}`)) {
+                return;
+            }
             const div = document.createElement("div");
             div.classList.add("granted-user");
             div.id = `granted-${userId}`;
@@ -783,20 +787,42 @@
             container.appendChild(div);
         }
 
+        // Helper function to enable video controls for granted users
+        function enableControls() {
+            isHost = true;
+            video.removeEventListener('play', preventPlay);
+            video.removeEventListener('pause', preventPause);
+            video.removeEventListener('seeking', preventSeek);
+            video.removeEventListener('ratechange', preventRateChange);
+            video.controls = true;
+            const requestSection = document.querySelector(".access-request-section");
+            if (requestSection) requestSection.style.display = "none";
+            issync = false;
+        }
+
+        // Helper function to disable video controls for revoked users
+        function disableControls() {
+            isHost = false;
+            video.controls = false;
+            video.addEventListener('play', preventPlay);
+            video.addEventListener('pause', preventPause);
+            video.addEventListener('seeking', preventSeek);
+            video.addEventListener('ratechange', preventRateChange);
+            const requestSection = document.querySelector(".access-request-section");
+            if (requestSection) {
+                requestSection.style.display = "block";
+                const requestBtn = document.getElementById("requestControlBtn");
+                const statusText = document.getElementById("requestStatus");
+                requestBtn.disabled = false;
+                if (statusText) statusText.textContent = "";
+            }
+        }
+
         socket.on("control_revoked", data => {
             if (data.user_id === parseInt(currentUserID)) {
-                isHost = false;
+                disableControls();
                 document.querySelector(".host-access-requests")?.remove();
                 document.querySelector(".granted-users-section")?.remove();
-                const requestSection = document.querySelector(".access-request-section");
-                if (requestSection) {
-                    requestSection.style.display = "block";
-                    const requestBtn = document.getElementById("requestControlBtn");
-                    const statusText = document.getElementById("requestStatus");
-                    requestBtn.disabled = false;
-                    if (statusText) statusText.textContent = "";
-                }
-                video.controls = false;
             }
         });
 
@@ -816,15 +842,7 @@
                 if (statusText) {
                     statusText.textContent = "You have been granted control!";
                 }
-                isHost = true;
-                document.querySelector(".access-request-section").style.display = "none";
-                video.removeEventListener('play', preventPlay);
-                video.removeEventListener('pause', preventPause);
-                video.removeEventListener('seeking', preventSeek);
-                video.removeEventListener('ratechange', preventRateChange);
-                video.offsetHeight;
-                video.controls = true;
-                issync = false;
+                enableControls();
             });
         } else {
             const pendingList = document.getElementById("pendingRequests");
@@ -848,16 +866,9 @@
             });
             socket.on("current_granted_users", data => {
                 data.users.forEach(u => addGrantedUser(u.user_id, u.username));
+                // Check if current user is in the granted list and enable controls if so
                 if (!isHost && data.users.some(u => u.user_id == parseInt(currentUserID))) {
-                    isHost = true;
-                    audio.controls = true;
-                    document.getElementById("prevBtn").disabled = false;
-                    document.getElementById("nextBtn").disabled = false;
-                    document.getElementById("shuffleBtn").disabled = false;
-                    document.getElementById("controls").style.display = "block";
-                    const requestSection = document.querySelector(".access-request-section");
-                    if (requestSection) requestSection.style.display = "none";
-
+                    enableControls();
                     const statusText = document.getElementById("requestStatus");
                     if (statusText) statusText.textContent = "You have been granted control!";
                 }
