@@ -367,13 +367,14 @@ def logout():
 def create_room():
     room=request.form['room']
     video=request.files.get('video')
-    username_input = request.form.get('username') 
+    typed_name=request.form.get('username')
     music_zip=request.files.get('music_zip')
     user=User.query.get(session['user_id'])
     if not user:
         return jsonify({"error": "User not found in session."}), 400
-    actual_username = username_input if username_input else user.name
-    encrypted_username = encrypt_username(actual_username) 
+    if not typed_name:
+        typed_name = user.name
+    encrypted_username = encrypt_username(typed_name)
     
     existing=Room.query.filter_by(name=room).first()
     existing_q=RoomQueue.query.filter_by(name=room).first()
@@ -447,7 +448,7 @@ def create_room():
             db.session.commit()
             return jsonify({"error": "No music files found in this room after upload."}), 400
         session['music_files_'+room]=music_files
-        encrypted_username = encrypt_username(user.name)
+        encrypted_username = encrypt_username(typed_name)
         return jsonify({"redirect_url": url_for('music_room', room=room, encrypted_username=encrypted_username)})
 
 
@@ -553,12 +554,13 @@ def handle_grant_control(data):
 def handle_revoke_control(data):
     room = data["room"]
     user_id = data["user_id"]
+    typed_name = data.get("username")
     user = User.query.get(user_id)
     if not user:
         return
     RoomGranted.query.filter_by(user_id=user_id, room_id=Room.query.filter_by(name=room).first().id).delete()
     db.session.commit()
-    username = user.name
+    username = typed_name if typed_name else user.name
     emit("control_revoked", {"user_id": user.id}, room=f"user_{user.id}")
     emit("chat_message", {
         "username": "System",
