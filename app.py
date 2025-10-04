@@ -155,6 +155,16 @@ class RoomAccessRequest(db.Model):
 
     room = db.relationship("Room", back_populates="access_requests")
     user = db.relationship("User", backref="access_requests")
+    
+class RoomGranted(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    room_id = db.Column(db.Integer, db.ForeignKey("room.id", ondelete="CASCADE"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    granted_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    room = db.relationship("Room", backref="granted_users")
+    user = db.relationship("User", backref="granted_rooms")
+
       
 class loginform(FlaskForm):
     email=StringField('Email', validators=[DataRequired(),Email()])
@@ -518,9 +528,17 @@ def handle_grant_control(data):
     req = RoomAccessRequest.query.filter_by(room_id=room_obj.id, user_id=user_id).first()
     if req:
         req.status = "approved"
-        db.session.commit()
-
+    
+    existing_grant = RoomGranted.query.filter_by(room_id=room_obj.id, user_id=user_id).first()
+    if not existing_grant:
+        grant = RoomGranted(room_id=room_obj.id, user_id=user_id)
+        db.session.add(grant)
+    db.session.commit()
     emit('control_granted', room=f"user_{user_id}")
+    emit('new_granted_user', {
+        "user_id": user_id,
+        "username": User.query.get(user_id).name
+    }, room=f"user_{host_user.id}")
 
 @socketio.on("revoke_control")
 def handle_revoke_control(data):
@@ -529,6 +547,8 @@ def handle_revoke_control(data):
     user = User.query.get(user_id)
     if not user:
         return
+    RoomGranted.query.filter_by(user_id=user_id, room_id=Room.query.filter_by(name=room).first().id).delete()
+    db.session.commit()
     username = user.name
     emit("control_revoked", {"user_id": user.id}, room=f"user_{user.id}")
     emit("chat_message", {
@@ -630,6 +650,13 @@ def handle_join_room(data):
             # Update member count
             room_obj.members = RoomMember.query.filter_by(room_id=room_obj.id).count()
             db.session.commit()
+        
+        granted = RoomGranted.query.filter_by(room_id=room_obj.id).all()
+        granted_list = [{"user_id": g.user_id, "username": g.user.name} for g in granted]
+        emit('current_granted_users', {"users": granted_list}, room=request.sid)
+        if user and any(g.user_id == user.id for g in granted):
+            emit('control_granted', room=request.sid)
+
     if room in room_state:
         emit('sync_playback', room_state[room], room=request.sid)
         

@@ -549,7 +549,7 @@
         if (!isHost) {
             socket.emit('request_sync', { target: username, room: room });
         }
-        
+
         document.getElementById("leaveRoomBtn").onclick = () => {
             socket.emit('leave_room', { room, username });
             window.location.href = '/';
@@ -845,6 +845,12 @@
 
                 li.appendChild(approveBtn);
                 pendingList.appendChild(li);
+            });
+            socket.on("current_granted_users", data => {
+                data.users.forEach(u => addGrantedUser(u.user_id, u.username));
+            });
+            socket.on("new_granted_user", data => {
+                addGrantedUser(data.user_id, data.username);
             });
         }
     </script>

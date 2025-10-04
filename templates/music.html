@@ -582,7 +582,7 @@
                 gap: 5px;
             }
 
-             #chatArea {
+            #chatArea {
                 max-height: calc(100vh - 150px);
             }
 
@@ -1045,7 +1045,7 @@
                 document.getElementById("shuffleBtn").disabled = false;
                 document.getElementById("controls").style.display = "block";
                 document.querySelector(".access-request-section").style.display = "none";
-                document.querySelector(".host-access-requests").style.display = "block";
+                document.querySelector(".host-access-requests").style.display = "none";
             });
         } else {
             const pendingList = document.getElementById("pendingRequests");
@@ -1066,6 +1066,12 @@
 
                 li.appendChild(approveBtn);
                 pendingList.appendChild(li);
+            });
+            socket.on("current_granted_users", data => {
+                data.users.forEach(u => addGrantedUser(u.user_id, u.username));
+            });
+            socket.on("new_granted_user", data => {
+                addGrantedUser(data.user_id, data.username);
             });
         }
 
