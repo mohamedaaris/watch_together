@@ -1069,6 +1069,19 @@
             });
             socket.on("current_granted_users", data => {
                 data.users.forEach(u => addGrantedUser(u.user_id, u.username));
+                if (!isHost && data.users.some(u => u.user_id == parseInt(currentUserID))) {
+                    isHost = true;
+                    audio.controls = true;
+                    document.getElementById("prevBtn").disabled = false;
+                    document.getElementById("nextBtn").disabled = false;
+                    document.getElementById("shuffleBtn").disabled = false;
+                    document.getElementById("controls").style.display = "block";
+                    const requestSection = document.querySelector(".access-request-section");
+                    if (requestSection) requestSection.style.display = "none";
+
+                    const statusText = document.getElementById("requestStatus");
+                    if (statusText) statusText.textContent = "You have been granted control!";
+                }
             });
             socket.on("new_granted_user", data => {
                 addGrantedUser(data.user_id, data.username);
