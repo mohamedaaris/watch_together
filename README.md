@@ -1,1 +1,2 @@
-# watch_together
+Watch Together is a collaborative streaming platform that allows multiple users to watch videos simultaneously from different locations.
+The platform synchronizes video playback in real-time, ensuring everyone enjoys the same content without delays. It features a responsive chat system, user-friendly room creation, and supports a wide range of video sources. Watch Together is designed to deliver seamless group viewing experiences, whether for friends, families, or communities.
