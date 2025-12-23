@@ -208,8 +208,14 @@ def login_required(f):
         return f(*args,**kwargs)
     return dec_function 
 
-with app.app_context():
-    db.create_all()
+@app.route("/_init_db")
+def init_db():
+    try:
+        db.create_all()
+        return "✅ Database initialized successfully"
+    except Exception as e:
+        return f"❌ DB init failed: {str(e)}", 500
+
 
 @app.errorhandler(500)
 def internal_error(error):
