@@ -15,16 +15,23 @@ from botocore.exceptions import ClientError
 from datetime import datetime,timezone
 
 app=Flask(__name__)
+
+socket.setdefaulttimeout(10)
+socket.has_ipv6 = False
+
 app.secret_key='my_secretkey'
 db_url = os.environ.get("DATABASE_URL")
-if db_url and db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
+if db_url and db_url.startswith("postgresql://"):
+    db_url = db_url.replace(
+        "postgresql://",
+        "postgresql+psycopg2://"
+    )
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "connect_args": {
-        "sslmode": "require",
-        "options": "-c inet_protocols=ipv4"
-    }
+        "sslmode": "require"
+    },
+    "pool_pre_ping": True
 }
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config['UPLOAD_FOLDER']='static/uploads'
