@@ -15,25 +15,8 @@ from botocore.exceptions import ClientError
 from datetime import datetime,timezone
 
 app=Flask(__name__)
-
-socket.setdefaulttimeout(10)
-socket.has_ipv6 = False
-
 app.secret_key='my_secretkey'
-db_url = os.environ.get("DATABASE_URL")
-if db_url and db_url.startswith("postgresql://"):
-    db_url = db_url.replace(
-        "postgresql://",
-        "postgresql+psycopg2://"
-    )
-app.config['SQLALCHEMY_DATABASE_URI'] = db_url
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "connect_args": {
-        "sslmode": "require"
-    },
-    "pool_pre_ping": True
-}
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['UPLOAD_FOLDER']='static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024 
 socketio=SocketIO(app,cors_allowed_origins='*',async_mode='eventlet')
@@ -215,13 +198,8 @@ def login_required(f):
         return f(*args,**kwargs)
     return dec_function 
 
-@app.route("/_init_db")
-def init_db():
-    try:
-        db.create_all()
-        return "✅ Database initialized successfully"
-    except Exception as e:
-        return f"❌ DB init failed: {str(e)}", 500
+with app.app_context(): 
+    db.create_all()
 
 
 @app.errorhandler(500)
