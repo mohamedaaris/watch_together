@@ -16,7 +16,17 @@ from datetime import datetime,timezone
 
 app=Flask(__name__)
 app.secret_key='my_secretkey'
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+db_url = os.environ.get("DATABASE_URL")
+if db_url and db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "connect_args": {
+        "sslmode": "require",
+        "options": "-c inet_protocols=ipv4"
+    }
+}
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config['UPLOAD_FOLDER']='static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024 
 socketio=SocketIO(app,cors_allowed_origins='*',async_mode='eventlet')
